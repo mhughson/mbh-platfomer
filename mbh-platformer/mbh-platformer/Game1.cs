@@ -69,7 +69,7 @@ namespace mbh_platformer
             public int cw;
             public int ch;
 
-            public bool is_solid = false;
+            public bool is_platform = false;
 
             public struct anim
             {
@@ -326,24 +326,28 @@ namespace mbh_platformer
                 set_anim("default");
 
                 x = 80;
-                y = 964; ;// - 64;
+                y = 964 + 64; ;// - 64;
                 w = 16;
                 h = 16;
                 cw = 16;
                 ch = 16;
+
+                is_platform = true;
             }
 
+            float tick = 0;
             public override void _update60()
             {
                 base._update60();
+                tick += 0.005f;
+                y = 964 - (cos(tick) * 64.0f);
 
-                //y += 1.0f;
-
-                if (inst.p.dash_time > 0 &&  inst.intersects_obj_obj(this, inst.p))
-                {
-                    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
-                    inst.p.start_dash_bounce(ref v);
-                }
+                // Should be handled by collide side.
+                //if (inst.p.dash_time > 0 && inst.intersects_obj_obj(this, inst.p))
+                //{
+                //    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
+                //    inst.p.start_dash_bounce(ref v);
+                //}
             }
         }
 
@@ -525,7 +529,7 @@ namespace mbh_platformer
                 dash_time = 0;
                 dash_count = 0;
                 inst.objs.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
-             }
+            }
 
             //call once per tick.
             public override void _update60()
@@ -600,15 +604,15 @@ namespace mbh_platformer
                         dx = dash_speed;
                     }
                 }
-                else if (dash_count == 0)
+                else // if (dash_count == 0)
                 {
                     //limit walk speed
                     self.dx = mid(-self.max_dx, self.dx, self.max_dx);
                 }
-                else
-                {
-                    self.dx = mid(-dash_speed, self.dx, dash_speed);
-                }
+                //else
+                //{
+                //    self.dx = mid(-dash_speed, self.dx, dash_speed);
+                //}
 
                 //move in x
                 self.x += self.dx;
@@ -1015,19 +1019,77 @@ namespace mbh_platformer
             var offset_y = self.ch / 2.0f;
             for (float i = -(offset_x); i <= (offset_x); i += 2)
             {
-                var tile = mget(flr((self.x + i) / 8), flr((self.y + (offset_y)) / 8));
-                if (fget(tile, 0) || (fget(tile, 1) && self.dy >= 0))
+                // OLD
+
+                //var tile = mget(flr((self.x + i) / 8), flr((self.y + (offset_y)) / 8));
+                //if (fget(tile, 0) || (fget(tile, 1) && self.dy >= 0))
+                //{
+                //    self.dy = 0;
+                //    self.y = (flr((self.y + (offset_y)) / 8) * 8) - (offset_y);
+                //    self.grounded = true;
+
+                //    self.airtime = 0;
+
+                //    landed = true;
+
+                //}
+
+
+                // NEW
+
+                var box_x = self.x;
+                var box_y = self.y;
+                var box_w_half = self.cw * 0.5f;
+                var box_h_half = self.ch * 0.5f;
+
+
+                var y = flr((box_y + box_h_half) / 8);
+
+                float? new_y = null;
+
+                if (fget(mget(flr((box_x + i) / 8), y), 0))
                 {
+                    new_y = (flr(y) * 8) - (self.h * 0.5f);
+                }
+                else
+                {
+                    foreach (sprite v in objs)
+                    {
+                        if (self == p && v.is_platform)
+                        {
+                            if (intersects_obj_obj(self, v))
+                            {
+                                // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
+                                new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);// + 1;
+
+                                break;
+                            }
+                        }
+
+                    }
+                }
+
+
+                if (new_y.HasValue)
+                {
+
+                    //         if self.on_collide_floor != nil then
+                    //               self:on_collide_floor(new_y)
+                    //else
                     self.dy = 0;
-                    self.y = (flr((self.y + (offset_y)) / 8) * 8) - (offset_y);
+
+                    self.y = new_y.Value;
+
                     self.grounded = true;
 
                     self.airtime = 0;
-
                     landed = true;
-
                 }
+
+
             }
+            //return false;
+            //OLD
             return landed;
         }
 
@@ -1068,8 +1130,8 @@ namespace mbh_platformer
             objs = new List<PicoXObj>();
 
             p = new player();
-            objs.Add(p);
             objs.Add(new rock());
+            objs.Add(p);
             game_cam = new cam(p);
         }
 
