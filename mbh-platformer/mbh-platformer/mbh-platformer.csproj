@@ -123,6 +123,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="libs\Gif.Components.dll" />
     <Content Include="libs\Mono8.dll" />
     <Content Include="libs\PicoX.dll" />
   </ItemGroup>

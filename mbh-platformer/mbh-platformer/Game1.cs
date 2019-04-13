@@ -10,6 +10,11 @@ namespace mbh_platformer
     /// <summary>
     /// This is the main type for your game.
     /// </summary>
+    /// 
+
+    // WORKING ON:
+    // Issue where you press into side of rock while it is going up, pulls player up.
+    // See: "C:\Users\Matt\Documents\Mono8\Mono8_636902690048336832.gif"
     public class Game1 : PicoXGame
     {
         public static Game1 inst;
@@ -259,9 +264,20 @@ namespace mbh_platformer
                     }
                 }
 
-                //pset(x, y, 14);
-                //rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
-                //rect(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 15);
+                pset(x, y, 14);
+                rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
+                rect(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 15);
+
+                // bottom
+                var offset_x = self.cw / 3.0f;
+                var offset_y = self.ch / 2.0f;
+                for (float i = -(offset_x); i <= (offset_x); i += 2)
+                {
+                    pset(x + i, y + offset_y, 9);
+                }
+
+                // sides
+
             }
         }
 
@@ -336,11 +352,32 @@ namespace mbh_platformer
             }
 
             float tick = 0;
+            bool hit_this_frame = false;
             public override void _update60()
             {
+                var self = this;
+
+                hit_this_frame = false;
+
+                // TODO: Error - This assumes a collision means you are standing on top!
+                var touching_player = inst.intersects_box_box(inst.p.x, inst.p.y + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.x, self.y, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                //var touching_player = inst.intersects_obj_obj(self, inst.p);
+
+                var old_x = self.x;
+
+                var old_y = self.y;
+
                 base._update60();
                 tick += 0.005f;
                 y = 964 - (cos(tick) * 64.0f);
+
+                if (touching_player)
+                {
+                    hit_this_frame = true;
+                    inst.p.x += self.x - old_x;
+                    inst.p.y += self.y - old_y;
+
+                }
 
                 // Should be handled by collide side.
                 //if (inst.p.dash_time > 0 && inst.intersects_obj_obj(this, inst.p))
@@ -348,6 +385,26 @@ namespace mbh_platformer
                 //    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
                 //    inst.p.start_dash_bounce(ref v);
                 //}
+            }
+
+            public override void _draw()
+            {
+                base._draw();
+
+                if (hit_this_frame)
+                {
+                    rectfill(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 8);
+                }
+
+                //var w = (cw - 2) * 0.5f;
+                //var h = ch * 0.5f;
+                //var x2 = this.x;
+                //var y2 = this.y + 16;
+                //var left = x2 - w;
+                //var top = y2 - h;
+                //var right = x2 + w;
+                //var bottom = y2 + h;
+                //rect(left, top, right, bottom, 4);
             }
         }
 
@@ -537,6 +594,12 @@ namespace mbh_platformer
                 var self = this;
 
                 string next_anim = curanim;
+
+
+                //if( inst.collide_floor(self))
+                //{
+                //    printh("hit floor");
+                //}
 
                 //todo: kill enemies.
 
@@ -964,10 +1027,25 @@ namespace mbh_platformer
         //assumes tile flag 0 == solid
         bool collide_side(player self, out Vector2 hit_point)
         {
-            //check for collision along inner-3rd
+            // Don't do collision of the player isn't moving sideways.
+            if (self.dx == 0)
+            {
+                hit_point = Vector2.Zero;
+                return false;
+            }
+
+            //check for collision along inner-2-3rds
             //of sprite side.
             var offset_x = self.cw / 2.0f;
             var offset_y = self.ch / 3.0f;
+            float correction_x = 0.0f;
+            float dir = 1.0f;
+            if (self.dx < 0)
+            {
+                dir = -1.0f;
+                offset_x *= -1.0f;
+                correction_x = 8.0f;
+            }
 
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
@@ -975,22 +1053,43 @@ namespace mbh_platformer
                 if (fget(mget(flr((self.x + (offset_x)) / 8), flr((self.y + i) / 8)), 0))
                 {
                     self.dx = 0;
-                    self.x = (flr(((self.x + (offset_x)) / 8)) * 8) - (offset_x);
+                    self.x = (flr(((self.x + (offset_x)) / 8)) * 8) + correction_x - (offset_x);
                     hit_point.X = self.x + (offset_x);
                     hit_point.Y = self.y + i;
                     return true;
                 }
 
-                if (fget(mget(flr((self.x - (offset_x)) / 8), flr((self.y + i) / 8)), 0))
+                // TODO: This doesn't need to be in loop of i
+                foreach (sprite v in objs)
                 {
-                    self.dx = 0;
+                    if (self == p && v.is_platform)
+                    {
+                        if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                        {
+                            // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
+                           // new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f) + 1;
 
-                    self.x = (flr((self.x - (offset_x)) / 8) * 8) + 8 + (offset_x);
-                    hit_point.X = self.x - (offset_x);
-                    hit_point.Y = self.y + i;
+                            self.dx = 0;
+                            self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
+                            hit_point.X = self.x + (offset_x);
+                            hit_point.Y = self.y + i;
 
-                    return true;
+                            return true;
+                        }
+                    }
+
                 }
+
+                //if (fget(mget(flr((self.x - (offset_x)) / 8), flr((self.y + i) / 8)), 0))
+                //{
+                //    self.dx = 0;
+
+                //    self.x = (flr((self.x - (offset_x)) / 8) * 8) + 8 + (offset_x);
+                //    hit_point.X = self.x - (offset_x);
+                //    hit_point.Y = self.y + i;
+
+                //    return true;
+                //}
 
             }
             //didn't hit a solid tile.
@@ -1057,10 +1156,12 @@ namespace mbh_platformer
                     {
                         if (self == p && v.is_platform)
                         {
-                            if (intersects_obj_obj(self, v))
+                            //if (intersects_obj_box(v, self.x, self.y + self.cw * 0.25f, (self.cw - 2) * 0.5f, self.ch * 0.25f))
+                            if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
+                            //if (intersects_obj_obj(v,self))
                             {
                                 // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
-                                new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);// + 1;
+                                new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);// + 1; //+1 is for ensuring player collides with platform in update.
 
                                 break;
                             }
@@ -1116,6 +1217,31 @@ namespace mbh_platformer
                 }
             }
 
+            if (!hit_roof && true)
+            {
+                foreach (sprite v in objs)
+                {
+                    if (self == p && v.is_platform)
+                    {
+                        //if (intersects_obj_box(v, self.x, self.y + self.cw * 0.25f, (self.cw - 2) * 0.5f, self.ch * 0.25f))
+                        if (inst.intersects_box_box(self.x, self.y - self.ch * 0.5f, self.cw * 0.5f, 0.5f, v.x, v.y, v.cw * 0.5f, (v.ch) * 0.5f))
+                        //if (intersects_obj_obj(v, self))
+                        {
+                            // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
+                            //new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);// + 1; //+1 is for ensuring player collides with platform in update.
+
+                            self.dy =min(0, max(v.dy, self.dy));
+                            self.y = (/*flr*/(v.y + v.ch * 0.5f)) + (self.ch * 0.5f);
+                            self.jump_hold_time = 0;
+                            hit_roof = true;
+
+                            break;
+                        }
+                    }
+
+                }
+            }
+
             return hit_roof;
         }
 
@@ -1157,6 +1283,16 @@ namespace mbh_platformer
             {
                 o._draw();
             }
+
+            camera(0, 0);
+            string btnstr = "";
+            for (int i = 0; i < 6; i++)
+            {
+                btnstr += btn(i) ? "1" : "0";
+                btnstr += " ";
+            }
+
+            print(btnstr, 0, Res.Y - 4, 0);
         }
 
         public override string GetMapString()
