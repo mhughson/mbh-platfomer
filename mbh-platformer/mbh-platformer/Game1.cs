@@ -1059,40 +1059,31 @@ namespace mbh_platformer
                     return true;
                 }
 
-                // TODO: This doesn't need to be in loop of i
-                foreach (sprite v in objs)
+            }
+
+            // Not hitting a tile, so try dynamic objects.
+            foreach (sprite v in objs)
+            {
+                // Only player for now.
+                if (self == p && v.is_platform)
                 {
-                    if (self == p && v.is_platform)
+                    // check for collision minus the top 2 pixels and the bottom 2 pixels (hence -4)
+                    if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                     {
-                        if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
-                        {
-                            // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
-                           // new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f) + 1;
+                        self.dx = 0;
+                        self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
 
-                            self.dx = 0;
-                            self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
-                            hit_point.X = self.x + (offset_x);
-                            hit_point.Y = self.y + i;
+                        // We don't really know the hit point, so just put it at the center on the edge that hit.
+                        hit_point.X = self.x + (offset_x);
+                        hit_point.Y = self.y;
 
-                            return true;
-                        }
+                        return true;
                     }
-
                 }
 
-                //if (fget(mget(flr((self.x - (offset_x)) / 8), flr((self.y + i) / 8)), 0))
-                //{
-                //    self.dx = 0;
-
-                //    self.x = (flr((self.x - (offset_x)) / 8) * 8) + 8 + (offset_x);
-                //    hit_point.X = self.x - (offset_x);
-                //    hit_point.Y = self.y + i;
-
-                //    return true;
-                //}
-
             }
-            //didn't hit a solid tile.
+
+            //didn't hit anything solid.
             hit_point.X = 0;
             hit_point.Y = 0;
 
@@ -1111,31 +1102,15 @@ namespace mbh_platformer
                 return false;
             }
 
-            var landed = false;
             //check for collision at multiple points along the bottom
             //of the sprite: left, center, and right.
-            var offset_x = self.cw / 3.0f;
+            var offset_x = self.cw / 3.0f; // only check inner 2-3rds
             var offset_y = self.ch / 2.0f;
+
+            float? new_y = null;
+
             for (float i = -(offset_x); i <= (offset_x); i += 2)
             {
-                // OLD
-
-                //var tile = mget(flr((self.x + i) / 8), flr((self.y + (offset_y)) / 8));
-                //if (fget(tile, 0) || (fget(tile, 1) && self.dy >= 0))
-                //{
-                //    self.dy = 0;
-                //    self.y = (flr((self.y + (offset_y)) / 8) * 8) - (offset_y);
-                //    self.grounded = true;
-
-                //    self.airtime = 0;
-
-                //    landed = true;
-
-                //}
-
-
-                // NEW
-
                 var box_x = self.x;
                 var box_y = self.y;
                 var box_w_half = self.cw * 0.5f;
@@ -1144,54 +1119,44 @@ namespace mbh_platformer
 
                 var y = flr((box_y + box_h_half) / 8);
 
-                float? new_y = null;
-
                 if (fget(mget(flr((box_x + i) / 8), y), 0))
                 {
                     new_y = (flr(y) * 8) - (self.h * 0.5f);
+                    break;
                 }
-                else
+            }
+
+            // If we didn't hit a tile, try dynamic objects.
+            if (!new_y.HasValue)
+            {
+                foreach (sprite v in objs)
                 {
-                    foreach (sprite v in objs)
+                    if (self == p && v.is_platform)
                     {
-                        if (self == p && v.is_platform)
+                        // Check a 1 pixel high box along the bottom the the player.
+                        // Adding 2 to the solid because that is what solids do in their update to stick to
+                        // objects when moving away from them.
+                        if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
                         {
-                            //if (intersects_obj_box(v, self.x, self.y + self.cw * 0.25f, (self.cw - 2) * 0.5f, self.ch * 0.25f))
-                            if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
-                            //if (intersects_obj_obj(v,self))
-                            {
-                                // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
-                                new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);// + 1; //+1 is for ensuring player collides with platform in update.
-
-                                break;
-                            }
+                            new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);
+                            break;
                         }
-
                     }
                 }
-
-
-                if (new_y.HasValue)
-                {
-
-                    //         if self.on_collide_floor != nil then
-                    //               self:on_collide_floor(new_y)
-                    //else
-                    self.dy = 0;
-
-                    self.y = new_y.Value;
-
-                    self.grounded = true;
-
-                    self.airtime = 0;
-                    landed = true;
-                }
-
-
             }
-            //return false;
-            //OLD
-            return landed;
+            
+            if (new_y.HasValue)
+            {
+                self.dy = 0;
+                self.y = new_y.Value;
+                self.grounded = true;
+                self.airtime = 0;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         //check if pushing into roof tile and resolve.
@@ -1201,7 +1166,7 @@ namespace mbh_platformer
         {
             //check for collision at multiple points along the top
             //of the sprite: left, center, and right.
-            var offset_x = self.cw / 3.0f;
+            var offset_x = self.cw / 3.0f; // check the inner 2 3rds
             var offset_y = self.ch / 2.0f;
 
             bool hit_roof = false;
@@ -1214,22 +1179,24 @@ namespace mbh_platformer
                     self.y = flr((self.y - (offset_y)) / 8) * 8 + 8 + (offset_y);
                     self.jump_hold_time = 0;
                     hit_roof = true;
+                    break;
                 }
             }
 
-            if (!hit_roof && true)
+            if (!hit_roof)
             {
                 foreach (sprite v in objs)
                 {
                     if (self == p && v.is_platform)
                     {
-                        //if (intersects_obj_box(v, self.x, self.y + self.cw * 0.25f, (self.cw - 2) * 0.5f, self.ch * 0.25f))
+                        // Check a 1 pixel box along the bottom of the player.
+                        // Using 0.5f because that seems more correct but im not totally sure.
                         if (inst.intersects_box_box(self.x, self.y - self.ch * 0.5f, self.cw * 0.5f, 0.5f, v.x, v.y, v.cw * 0.5f, (v.ch) * 0.5f))
-                        //if (intersects_obj_obj(v, self))
                         {
-                            // TODO: +1 fixes falling ever frame, but causes player to collide with floor when dashing.
-                            //new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);// + 1; //+1 is for ensuring player collides with platform in update.
-
+                            // Take the dy of the player or the solid, which ever is more downward.
+                            // This ensure that the player doesn't kind of "float" along the bottom of the
+                            // solid. We also min it to 0 so that if both are moving upwards, the player is
+                            // at least stopped.
                             self.dy =min(0, max(v.dy, self.dy));
                             self.y = (/*flr*/(v.y + v.ch * 0.5f)) + (self.ch * 0.5f);
                             self.jump_hold_time = 0;
