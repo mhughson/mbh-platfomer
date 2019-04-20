@@ -1292,7 +1292,8 @@ namespace mbh_platformer
             return "";
         }
 
-        public Vector2 Res = new Vector2(160, 144);
+        //public Vector2 Res = new Vector2(256, 240); // NES
+        public Vector2 Res = new Vector2(160, 144); // GB
 
         public override Tuple<int, int> GetResolution() { return new Tuple<int, int>((int)Res.X, (int)Res.Y); }
     }
