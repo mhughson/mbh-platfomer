@@ -48,8 +48,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Mono8">
-      <HintPath>..\..\..\mono8\Mono8\bin\Release\Mono8.dll</HintPath>
+    <Reference Include="Mono8GL, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>libs\Mono8GL.dll</HintPath>
     </Reference>
     <Reference Include="MonoGame.Framework">
       <HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\DesktopGL\MonoGame.Framework.dll</HintPath>
@@ -125,6 +126,7 @@
   <ItemGroup>
     <Content Include="libs\Gif.Components.dll" />
     <Content Include="libs\Mono8.dll" />
+    <Content Include="libs\Mono8GL.dll" />
     <Content Include="libs\PicoX.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

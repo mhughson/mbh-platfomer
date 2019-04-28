@@ -63,6 +63,59 @@ namespace mbh_platformer
             }
         }
 
+        //helper for more complex
+        //button press tracking.
+        public class complex_button : PicoXObj
+        {
+            //state
+            public bool is_pressed = false;//pressed this frame
+            public bool is_down = false;//currently down
+            public bool is_released = false;//released this frame
+            public int ticks_down = 0;//how long down
+
+            public int btn_id;
+
+            public complex_button(int button_id)
+            {
+                btn_id = button_id;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                var self = this;
+
+                //start with assumption
+                //that not a new press.
+                self.is_pressed = false;
+                is_released = false;
+                if (btn(btn_id))
+                {
+                    if (!self.is_down)
+                    {
+
+                        self.is_pressed = true;
+
+                    }
+
+                    self.is_down = true;
+
+                    self.ticks_down += 1;
+                }
+                else
+                {
+                    is_released = is_down;
+
+                    self.is_down = false;
+
+                    self.is_pressed = false;
+
+                    self.ticks_down = 0;
+                }
+            }
+        }
+
         public class sprite : PicoXObj
         {
             public float x;
@@ -264,6 +317,7 @@ namespace mbh_platformer
                     }
                 }
 
+                /*
                 pset(x, y, 14);
                 rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
                 rect(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 15);
@@ -275,7 +329,7 @@ namespace mbh_platformer
                 {
                     pset(x + i, y + offset_y, 9);
                 }
-
+                */
                 // sides
 
             }
@@ -316,6 +370,16 @@ namespace mbh_platformer
                     inst.objs.Remove(this);
                 };
             }
+
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                base._update60();
+            }
         }
 
 
@@ -355,6 +419,11 @@ namespace mbh_platformer
             bool hit_this_frame = false;
             public override void _update60()
             {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
                 var self = this;
 
                 hit_this_frame = false;
@@ -369,7 +438,9 @@ namespace mbh_platformer
 
                 base._update60();
                 tick += 0.005f;
-                y = 964 - (cos(tick) * 64.0f);
+                //y = 964 - (cos(tick) * 64.0f);
+                y = 964;// - (cos(tick) * 64.0f);
+                x = 80 - (cos(tick) * 64.0f);
 
                 if (touching_player)
                 {
@@ -377,6 +448,14 @@ namespace mbh_platformer
                     inst.p.x += self.x - old_x;
                     inst.p.y += self.y - old_y;
 
+                    //inst.p.dx = self.x - old_x;
+                    //inst.p.dy = self.y - old_y;
+
+                    //inst.p.platformed = true;
+                }
+                else
+                {
+                    inst.p.platformed = false;
                 }
 
                 // Should be handled by collide side.
@@ -393,7 +472,7 @@ namespace mbh_platformer
 
                 if (hit_this_frame)
                 {
-                    rectfill(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 8);
+                    //rectfill(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 8);
                 }
 
                 //var w = (cw - 2) * 0.5f;
@@ -424,60 +503,6 @@ namespace mbh_platformer
             public float dash_time = 0;
             public int dash_count = 0;
 
-            //helper for more complex
-            //button press tracking.
-            //todo: generalize button index.
-            public class complex_button : PicoXObj
-            {
-                //state
-                public bool is_pressed = false;//pressed this frame
-                public bool is_down = false;//currently down
-                public bool is_released = false;
-                public int ticks_down = 0;//how long down
-
-                public int btn_id;
-
-                public complex_button(int button_id)
-                {
-                    btn_id = button_id;
-                }
-
-                public override void _update60()
-                {
-                    base._update60();
-
-                    var self = this;
-
-                    //start with assumption
-                    //that not a new press.
-                    self.is_pressed = false;
-                    is_released = false;
-                    if (btn(btn_id))
-                    {
-                        if (!self.is_down)
-                        {
-
-                            self.is_pressed = true;
-
-                        }
-
-                        self.is_down = true;
-
-                        self.ticks_down += 1;
-                    }
-                    else
-                    {
-                        is_released = is_down;
-
-                        self.is_down = false;
-
-                        self.is_pressed = false;
-
-                        self.ticks_down = 0;
-                    }
-                }
-            }
-
             complex_button jump_button = new complex_button(4);
             complex_button dash_button = new complex_button(5);
 
@@ -487,6 +512,7 @@ namespace mbh_platformer
 
             bool jump_btn_released = true;//can we jump again?
             public bool grounded = false;//on ground
+            public bool platformed = false;
 
             public int airtime = 0;//time since groundeds
 
@@ -569,8 +595,8 @@ namespace mbh_platformer
                     },
                 };
 
-                x = 80;
-                y = 964;
+                x = 159;
+                y = 932;
                 dx = 0;
                 dy = 0;
                 w = 32;
@@ -586,11 +612,18 @@ namespace mbh_platformer
                 dash_time = 0;
                 dash_count = 0;
                 inst.objs.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
+
+                inst.hit_pause.start_pause(hit_pause_manager.pause_reason.bounce);
             }
 
             //call once per tick.
             public override void _update60()
             {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
                 var self = this;
 
                 string next_anim = curanim;
@@ -641,14 +674,17 @@ namespace mbh_platformer
                     }
                     else
                     {
-                        if (self.grounded)
+                        if (!platformed)
                         {
+                            if (self.grounded)
+                            {
 
-                            self.dx *= self.dcc;
-                        }
-                        else
-                        {
-                            self.dx *= self.air_dcc;
+                                self.dx *= self.dcc;
+                            }
+                            else
+                            {
+                                self.dx *= self.air_dcc;
+                            }
                         }
                     }
                 }
@@ -667,7 +703,7 @@ namespace mbh_platformer
                         dx = dash_speed;
                     }
                 }
-                else // if (dash_count == 0)
+                else if (!platformed)
                 {
                     //limit walk speed
                     self.dx = mid(-self.max_dx, self.dx, self.max_dx);
@@ -770,6 +806,11 @@ namespace mbh_platformer
 
                 //roof
                 inst.collide_roof(self);
+
+                if (fget(mget(flr(x/8), flr(y/8)), 1))
+                {
+                    inst.set_game_state(game_state.game_over);
+                }
 
                 //handle playing correct animation when
                 //on the ground.
@@ -955,11 +996,6 @@ namespace mbh_platformer
             }
         }
 
-        player p;
-        cam game_cam;
-
-        List<PicoXObj> objs;
-
         //math
         ////////////////////////////////
 
@@ -1028,11 +1064,16 @@ namespace mbh_platformer
         bool collide_side(player self, out Vector2 hit_point)
         {
             // Don't do collision of the player isn't moving sideways.
-            if (self.dx == 0)
-            {
-                hit_point = Vector2.Zero;
-                return false;
-            }
+            //if (self.dx == 0)
+            //{
+            //    hit_point = Vector2.Zero;
+            //    return false;
+            //}
+
+
+            //didn't hit anything solid.
+            hit_point.X = 0;
+            hit_point.Y = 0;
 
             //check for collision along inner-2-3rds
             //of sprite side.
@@ -1040,13 +1081,15 @@ namespace mbh_platformer
             var offset_y = self.ch / 3.0f;
             float correction_x = 0.0f;
             float dir = 1.0f;
-            if (self.dx < 0)
-            {
-                dir = -1.0f;
-                offset_x *= -1.0f;
-                correction_x = 8.0f;
-            }
+            bool hit = false;
+            //if (self.dx < 0)
+            //{
+            //    dir = -1.0f;
+            //    offset_x *= -1.0f;
+            //    correction_x = 8.0f;
+            //}
 
+            // Right Tiles
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
 
@@ -1056,7 +1099,27 @@ namespace mbh_platformer
                     self.x = (flr(((self.x + (offset_x)) / 8)) * 8) + correction_x - (offset_x);
                     hit_point.X = self.x + (offset_x);
                     hit_point.Y = self.y + i;
-                    return true;
+                    //return true;
+                    hit = true;
+                }
+
+            }
+
+            // Left Tiles
+            dir = -1.0f;
+            offset_x *= -1.0f;
+            correction_x = 8.0f;
+            for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
+            {
+
+                if (fget(mget(flr((self.x + (offset_x)) / 8), flr((self.y + i) / 8)), 0))
+                {
+                    self.dx = 0;
+                    self.x = (flr(((self.x + (offset_x)) / 8)) * 8) + correction_x - (offset_x);
+                    hit_point.X = self.x + (offset_x);
+                    hit_point.Y = self.y + i;
+                    //return true;
+                    hit = true;
                 }
 
             }
@@ -1067,27 +1130,47 @@ namespace mbh_platformer
                 // Only player for now.
                 if (self == p && v.is_platform)
                 {
+                    // Left objects.
+
                     // check for collision minus the top 2 pixels and the bottom 2 pixels (hence -4)
-                    if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                    //if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                    if (intersects_box_box(self.x - self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                     {
                         self.dx = 0;
-                        self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
+                        //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
+                        // +1 is to fix a bug where the player seems to get sucked into the side of platforms
+                        // when pushed.
+                        self.x = (/*flr*/(v.x + v.cw * 0.5f)) + (self.cw * 0.5f) + 1.0f;
 
                         // We don't really know the hit point, so just put it at the center on the edge that hit.
                         hit_point.X = self.x + (offset_x);
                         hit_point.Y = self.y;
 
-                        return true;
+                        //return true;
+                        hit = true;
+                    }
+
+                    // Right objects.
+
+                    if (intersects_box_box(self.x + self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                    {
+                        self.dx = 0;
+                        //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
+                        self.x = (/*flr*/(v.x - v.cw * 0.5f)) - (self.cw * 0.5f) - 1.0f;
+
+                        // We don't really know the hit point, so just put it at the center on the edge that hit.
+                        hit_point.X = self.x + (offset_x);
+                        hit_point.Y = self.y;
+
+                        //return true;
+                        hit = true;
                     }
                 }
 
             }
 
-            //didn't hit anything solid.
-            hit_point.X = 0;
-            hit_point.Y = 0;
-
-            return false;
+            //return false;
+            return hit;
         }
 
 
@@ -1164,6 +1247,11 @@ namespace mbh_platformer
         //assumes tile flag 0 == solid
         bool collide_roof(player self)
         {
+            if (self.dy > 0)
+            {
+                return false;
+            }
+
             //check for collision at multiple points along the top
             //of the sprite: left, center, and right.
             var offset_x = self.cw / 3.0f; // check the inner 2 3rds
@@ -1212,29 +1300,163 @@ namespace mbh_platformer
             return hit_roof;
         }
 
+        public class hit_pause_manager : PicoXObj
+        {
+            public enum pause_reason
+            {
+                bounce,
+            }
+
+            Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
+            {
+                { pause_reason.bounce, 0 } // no pause for now. happens too much.
+            };
+
+            public int pause_time_remaining { get; protected set; }
+
+            public hit_pause_manager()
+            {
+                pause_time_remaining = 0;
+            }
+
+            public void start_pause(pause_reason reason)
+            {
+                switch(reason)
+                {
+                    case pause_reason.bounce:
+                        {
+                            pause_time_remaining = (int)inst.max(pause_time_remaining, pause_times[reason]);
+                            break;
+                        }
+                }
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                pause_time_remaining = (int)inst.max(0, pause_time_remaining - 1);
+            }
+
+            public bool is_paused()
+            {
+                return pause_time_remaining > 0;
+            }
+        }
+
+        public enum game_state
+        {
+            main_menu,
+            gameplay,
+            game_over,
+
+        }
+
+        player p;
+        cam game_cam;
+
+        List<PicoXObj> objs;
+
+        game_state cur_game_state;
+        complex_button start_game;
+
+        public hit_pause_manager hit_pause;
+
         public Game1() : base()
         {
             // MUST BE DONE BEFORE ANY PICOXOBJ ARE CREATED
             inst = this;
         }
 
+        public void set_game_state(game_state new_state)
+        {
+            // Leaving...
+            switch(cur_game_state)
+            {
+                case game_state.main_menu:
+                    {
+                        // main_menu -> gameplay
+                        if (new_state == game_state.gameplay)
+                        {
+
+                        }
+                        break;
+                    }
+
+                case game_state.gameplay:
+                    {
+                        if (new_state == game_state.game_over)
+                        {
+                            objs.Clear();
+                        }
+                        break;
+                    }
+            }
+
+            cur_game_state = new_state;
+
+            // Entering...
+            switch(cur_game_state)
+            {
+                case game_state.gameplay:
+                    {
+                        objs = new List<PicoXObj>();
+
+                        p = new player();
+                        objs.Add(new rock());
+                        objs.Add(p);
+                        game_cam = new cam(p);
+                        break;
+                    }
+                default:
+                    break;
+            }
+        }
+
         public override void _init()
         {
             objs = new List<PicoXObj>();
-
-            p = new player();
-            objs.Add(new rock());
-            objs.Add(p);
-            game_cam = new cam(p);
+            start_game = new complex_button(4);
+            hit_pause = new hit_pause_manager();
+            cur_game_state = game_state.main_menu;
         }
 
         public override void _update60()
         {
+            start_game._update60();
+
+            switch (cur_game_state)
+            {
+                case game_state.main_menu:
+                    {
+                        if (start_game.is_released)
+                        {
+                            set_game_state(game_state.gameplay);
+                        }
+                        break;
+                    }
+                case game_state.game_over:
+                    {
+                        if (start_game.is_released)
+                        {
+                            set_game_state(game_state.gameplay);
+                        }
+                        break;
+                    }
+            }
+
             for(int i = 0; i < objs.Count; i++)
             {
                 objs[i]._update60();
             }
-            game_cam._update60();
+            if (game_cam != null)
+            {
+                game_cam._update60();
+            }
+            if (hit_pause != null)
+            {
+                hit_pause._update60();
+            }
         }
 
         public override void _draw()
@@ -1243,8 +1465,23 @@ namespace mbh_platformer
             palt(11, true);
             cls(0);
 
-            camera(game_cam.cam_pos().X, game_cam.cam_pos().Y);
-            map(0, 0, 0, 0, 16, 16);
+            if (game_cam != null)
+            {
+                camera(game_cam.cam_pos().X, game_cam.cam_pos().Y);
+            }
+            else
+            {
+                camera(0, 0);
+            }
+
+            switch (cur_game_state)
+            {
+                case game_state.gameplay:
+                    {
+                        map(0, 0, 0, 0, 16, 16);
+                        break;
+                    }
+            }
 
             foreach (PicoXObj o in objs)
             {
@@ -1252,6 +1489,26 @@ namespace mbh_platformer
             }
 
             camera(0, 0);
+
+            switch (cur_game_state)
+            {
+                case game_state.main_menu:
+                    {
+                        var str = "dash maximus";
+                        print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
+                        str = "-dx-";
+                        print(str, 128 - (str.Length * 0.5f) * 4, 120 + 6, 7);
+                        break;
+                    }
+                case game_state.game_over:
+                    {
+                        var str = "game over";
+                        print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
+                        break;
+                    }
+            }
+
+
             string btnstr = "";
             for (int i = 0; i < 6; i++)
             {
@@ -1292,8 +1549,8 @@ namespace mbh_platformer
             return "";
         }
 
-        //public Vector2 Res = new Vector2(256, 240); // NES
-        public Vector2 Res = new Vector2(160, 144); // GB
+        public Vector2 Res = new Vector2(256, 240); // NES
+        //public Vector2 Res = new Vector2(160, 144); // GB
 
         public override Tuple<int, int> GetResolution() { return new Tuple<int, int>((int)Res.X, (int)Res.Y); }
     }
