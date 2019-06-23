@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tileset name="platform_sheet" tilewidth="8" tileheight="8" tilecount="1024" columns="16">
  <image source="platformer_sheet.png" trans="000000" width="128" height="512"/>
+ <tile id="834">
+  <properties>
+   <property name="Flag" type="int" value="5"/>
+  </properties>
+ </tile>
+ <tile id="835">
+  <properties>
+   <property name="Flag" type="int" value="5"/>
+  </properties>
+ </tile>
+ <tile id="850">
+  <properties>
+   <property name="Flag" type="int" value="5"/>
+  </properties>
+ </tile>
+ <tile id="851">
+  <properties>
+   <property name="Flag" type="int" value="5"/>
+  </properties>
+ </tile>
  <tile id="864">
   <properties>
    <property name="Flag" type="int" value="1"/>
@@ -101,6 +121,36 @@
    <property name="Flag" type="int" value="2"/>
   </properties>
  </tile>
+ <tile id="998">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="999">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1000">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1001">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1002">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1003">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
  <tile id="1008">
   <properties>
    <property name="Flag" type="int" value="1"/>
@@ -127,6 +177,36 @@
   </properties>
  </tile>
  <tile id="1013">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1014">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1015">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1016">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1017">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1018">
+  <properties>
+   <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="1019">
   <properties>
    <property name="Flag" type="int" value="2"/>
   </properties>

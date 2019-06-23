@@ -329,9 +329,9 @@ namespace mbh_platformer
                 {
                     pset(x + i, y + offset_y, 9);
                 }
-                */
+                
                 // sides
-
+                */
             }
         }
 
@@ -382,7 +382,59 @@ namespace mbh_platformer
             }
         }
 
+        public class simple_fx_death_spark : simple_fx
+        {
+            float dir_x;
+            float dir_y;
 
+            public simple_fx_death_spark(float dir_x, float dir_y) : base()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "explode",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=4,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(224, 2, 2),
+                                create_anim_frame(226, 2, 2),
+                                create_anim_frame(228, 2, 2),
+                                create_anim_frame(226, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("explode");
+
+                x = 64;
+                y = 64;
+                w = 16;
+                h = 16;
+
+                this.dir_x = dir_x;
+                this.dir_y = dir_y;
+
+                event_on_anim_done = null;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                x += dir_x;
+                y += dir_y;
+            }
+        }
 
         public class rock : sprite
         {
@@ -613,13 +665,21 @@ namespace mbh_platformer
                 dash_count = 0;
                 inst.objs.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
 
+                int mx = flr(hit_point.X / 8.0f);
+                int my = flr(hit_point.Y / 8.0f);
+                if (fget(mget(mx, my), 2))
+                {
+                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+                    inst.objs.Add(new block_restorer(mx, my, 240));
+                }
+
                 inst.hit_pause.start_pause(hit_pause_manager.pause_reason.bounce);
             }
 
             //call once per tick.
             public override void _update60()
             {
-                if (inst.hit_pause.is_paused())
+                if (inst.hit_pause.is_paused() || (inst.cur_game_state == game_state.gameplay_dead))
                 {
                     return;
                 }
@@ -809,7 +869,30 @@ namespace mbh_platformer
 
                 if (fget(mget(flr(x/8), flr(y/8)), 1))
                 {
-                    inst.set_game_state(game_state.game_over);
+                    inst.set_game_state(game_state.gameplay_dead);
+                    inst.hit_pause.start_pause(hit_pause_manager.pause_reason.death);
+
+                    Tuple<float, float>[] death_dirs = new Tuple<float, float>[]
+                    {
+                        new Tuple<float, float>(-1.0f, 0.0f),
+                        new Tuple<float, float>( 1.0f, 0.0f),
+                        new Tuple<float, float>( 0.0f, 1.0f),
+                        new Tuple<float, float>( 0.0f,-1.0f),
+                        new Tuple<float, float>(-0.7f,-0.7f),
+                        new Tuple<float, float>( 0.7f,-0.7f),
+                        new Tuple<float, float>( 0.7f, 0.7f),
+                        new Tuple<float, float>(-0.7f, 0.7f),
+                    };
+
+                    foreach (var dir in death_dirs)
+                    {
+                        simple_fx_death_spark o = new simple_fx_death_spark(dir.Item1, dir.Item2)
+                        {
+                            x = x,
+                            y = y,
+                        };
+                        inst.objs.Add(o);
+                    }
                 }
 
                 //handle playing correct animation when
@@ -881,6 +964,14 @@ namespace mbh_platformer
                 set_anim(next_anim);
 
                 base._update60();
+            }
+
+            public override void _draw()
+            {
+                if (inst.cur_game_state != game_state.gameplay_dead)
+                {
+                    base._draw();
+                }
             }
         }
 
@@ -1108,15 +1199,14 @@ namespace mbh_platformer
             // Left Tiles
             dir = -1.0f;
             offset_x *= -1.0f;
-            correction_x = 8.0f;
+            correction_x = 7.0f;
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
-
                 if (fget(mget(flr((self.x + (offset_x)) / 8), flr((self.y + i) / 8)), 0))
                 {
                     self.dx = 0;
                     self.x = (flr(((self.x + (offset_x)) / 8)) * 8) + correction_x - (offset_x);
-                    hit_point.X = self.x + (offset_x);
+                    hit_point.X = self.x + (offset_x) - 1;
                     hit_point.Y = self.y + i;
                     //return true;
                     hit = true;
@@ -1125,48 +1215,51 @@ namespace mbh_platformer
             }
 
             // Not hitting a tile, so try dynamic objects.
-            foreach (sprite v in objs)
+            foreach (PicoXObj o in objs)
             {
-                // Only player for now.
-                if (self == p && v.is_platform)
+                sprite v = o as sprite;
+                if (v != null)
                 {
-                    // Left objects.
-
-                    // check for collision minus the top 2 pixels and the bottom 2 pixels (hence -4)
-                    //if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
-                    if (intersects_box_box(self.x - self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                    // Only player for now.
+                    if (self == p && v.is_platform)
                     {
-                        self.dx = 0;
-                        //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
-                        // +1 is to fix a bug where the player seems to get sucked into the side of platforms
-                        // when pushed.
-                        self.x = (/*flr*/(v.x + v.cw * 0.5f)) + (self.cw * 0.5f) + 1.0f;
+                        // Left objects.
 
-                        // We don't really know the hit point, so just put it at the center on the edge that hit.
-                        hit_point.X = self.x + (offset_x);
-                        hit_point.Y = self.y;
+                        // check for collision minus the top 2 pixels and the bottom 2 pixels (hence -4)
+                        //if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                        if (intersects_box_box(self.x - self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                        {
+                            self.dx = 0;
+                            //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
+                            // +1 is to fix a bug where the player seems to get sucked into the side of platforms
+                            // when pushed.
+                            self.x = (/*flr*/(v.x + v.cw * 0.5f)) + (self.cw * 0.5f) + 1.0f;
 
-                        //return true;
-                        hit = true;
-                    }
+                            // We don't really know the hit point, so just put it at the center on the edge that hit.
+                            hit_point.X = self.x + (offset_x);
+                            hit_point.Y = self.y;
 
-                    // Right objects.
+                            //return true;
+                            hit = true;
+                        }
 
-                    if (intersects_box_box(self.x + self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
-                    {
-                        self.dx = 0;
-                        //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
-                        self.x = (/*flr*/(v.x - v.cw * 0.5f)) - (self.cw * 0.5f) - 1.0f;
+                        // Right objects.
 
-                        // We don't really know the hit point, so just put it at the center on the edge that hit.
-                        hit_point.X = self.x + (offset_x);
-                        hit_point.Y = self.y;
+                        if (intersects_box_box(self.x + self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                        {
+                            self.dx = 0;
+                            //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
+                            self.x = (/*flr*/(v.x - v.cw * 0.5f)) - (self.cw * 0.5f) - 1.0f;
 
-                        //return true;
-                        hit = true;
+                            // We don't really know the hit point, so just put it at the center on the edge that hit.
+                            hit_point.X = self.x + (offset_x);
+                            hit_point.Y = self.y;
+
+                            //return true;
+                            hit = true;
+                        }
                     }
                 }
-
             }
 
             //return false;
@@ -1212,17 +1305,21 @@ namespace mbh_platformer
             // If we didn't hit a tile, try dynamic objects.
             if (!new_y.HasValue)
             {
-                foreach (sprite v in objs)
+                foreach (PicoXObj o in objs)
                 {
-                    if (self == p && v.is_platform)
+                    sprite v = o as sprite;
+                    if (v != null)
                     {
-                        // Check a 1 pixel high box along the bottom the the player.
-                        // Adding 2 to the solid because that is what solids do in their update to stick to
-                        // objects when moving away from them.
-                        if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
+                        if (self == p && v.is_platform)
                         {
-                            new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);
-                            break;
+                            // Check a 1 pixel high box along the bottom the the player.
+                            // Adding 2 to the solid because that is what solids do in their update to stick to
+                            // objects when moving away from them.
+                            if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
+                            {
+                                new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);
+                                break;
+                            }
                         }
                     }
                 }
@@ -1273,27 +1370,30 @@ namespace mbh_platformer
 
             if (!hit_roof)
             {
-                foreach (sprite v in objs)
+                foreach (PicoXObj o in objs)
                 {
-                    if (self == p && v.is_platform)
+                    sprite v = o as sprite;
+                    if (v != null)
                     {
-                        // Check a 1 pixel box along the bottom of the player.
-                        // Using 0.5f because that seems more correct but im not totally sure.
-                        if (inst.intersects_box_box(self.x, self.y - self.ch * 0.5f, self.cw * 0.5f, 0.5f, v.x, v.y, v.cw * 0.5f, (v.ch) * 0.5f))
+                        if (self == p && v.is_platform)
                         {
-                            // Take the dy of the player or the solid, which ever is more downward.
-                            // This ensure that the player doesn't kind of "float" along the bottom of the
-                            // solid. We also min it to 0 so that if both are moving upwards, the player is
-                            // at least stopped.
-                            self.dy =min(0, max(v.dy, self.dy));
-                            self.y = (/*flr*/(v.y + v.ch * 0.5f)) + (self.ch * 0.5f);
-                            self.jump_hold_time = 0;
-                            hit_roof = true;
+                            // Check a 1 pixel box along the bottom of the player.
+                            // Using 0.5f because that seems more correct but im not totally sure.
+                            if (inst.intersects_box_box(self.x, self.y - self.ch * 0.5f, self.cw * 0.5f, 0.5f, v.x, v.y, v.cw * 0.5f, (v.ch) * 0.5f))
+                            {
+                                // Take the dy of the player or the solid, which ever is more downward.
+                                // This ensure that the player doesn't kind of "float" along the bottom of the
+                                // solid. We also min it to 0 so that if both are moving upwards, the player is
+                                // at least stopped.
+                                self.dy = min(0, max(v.dy, self.dy));
+                                self.y = (/*flr*/(v.y + v.ch * 0.5f)) + (self.ch * 0.5f);
+                                self.jump_hold_time = 0;
+                                hit_roof = true;
 
-                            break;
+                                break;
+                            }
                         }
                     }
-
                 }
             }
 
@@ -1305,11 +1405,13 @@ namespace mbh_platformer
             public enum pause_reason
             {
                 bounce,
+                death,
             }
 
             Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
             {
-                { pause_reason.bounce, 0 } // no pause for now. happens too much.
+                { pause_reason.bounce, 0 }, // no pause for now. happens too much.
+                { pause_reason.death, 10 }
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -1321,14 +1423,7 @@ namespace mbh_platformer
 
             public void start_pause(pause_reason reason)
             {
-                switch(reason)
-                {
-                    case pause_reason.bounce:
-                        {
-                            pause_time_remaining = (int)inst.max(pause_time_remaining, pause_times[reason]);
-                            break;
-                        }
-                }
+                pause_time_remaining = (int)inst.max(pause_time_remaining, pause_times[reason]);
             }
 
             public override void _update60()
@@ -1344,10 +1439,38 @@ namespace mbh_platformer
             }
         }
 
+        public class block_restorer : PicoXObj
+        {
+            public int map_x;
+            public int map_y;
+            public int time_remaining;
+
+            public block_restorer(int map_x, int map_y, int life_span) : base()
+            {
+                this.map_x = map_x;
+                this.map_y = map_y;
+                time_remaining = life_span;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                time_remaining -= 1;
+
+                if (time_remaining <= 0)
+                {
+                    inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851});
+                    inst.objs.Remove(this);
+                }
+            }
+        }
+
         public enum game_state
         {
             main_menu,
             gameplay,
+            gameplay_dead,
             game_over,
 
         }
@@ -1358,6 +1481,7 @@ namespace mbh_platformer
         List<PicoXObj> objs;
 
         game_state cur_game_state;
+        uint time_in_state;
         complex_button start_game;
 
         public hit_pause_manager hit_pause;
@@ -1383,7 +1507,7 @@ namespace mbh_platformer
                         break;
                     }
 
-                case game_state.gameplay:
+                case game_state.gameplay_dead:
                     {
                         if (new_state == game_state.game_over)
                         {
@@ -1394,12 +1518,14 @@ namespace mbh_platformer
             }
 
             cur_game_state = new_state;
+            time_in_state = 0;
 
             // Entering...
-            switch(cur_game_state)
+            switch (cur_game_state)
             {
                 case game_state.gameplay:
                     {
+                        reloadmap(GetMapString());
                         objs = new List<PicoXObj>();
 
                         p = new player();
@@ -1413,16 +1539,49 @@ namespace mbh_platformer
             }
         }
 
+        public Point map_pos_to_meta_tile(int x, int y)
+        {
+            x = (x % 2 == 0) ? x : x - 1;
+            y = (y % 2 == 0) ? y : y - 1;
+            return new Point(x, y);
+        }
+
+        public void change_meta_tile(int x, int y, int[] t)
+        {
+            Point final_pos = map_pos_to_meta_tile(x, y);
+            x = final_pos.X;
+            y = final_pos.Y;
+            
+            int count = 0;
+
+            for (int j = 0; j <= 1; j++)
+            {
+                for (int i = 0; i <= 1; i++)
+                {
+                    mset(x + i, y + j, t[count]);
+                    count += 1;
+                }
+            }
+        }
+
+        public void change_meta_tile(int x, int y, int tile_id)
+        {
+            change_meta_tile(x, y, new int[] { tile_id, tile_id, tile_id, tile_id });
+        }
+
         public override void _init()
         {
             objs = new List<PicoXObj>();
             start_game = new complex_button(4);
             hit_pause = new hit_pause_manager();
             cur_game_state = game_state.main_menu;
+            reloadmap("");
         }
 
         public override void _update60()
         {
+            time_in_state++;
+
             start_game._update60();
 
             switch (cur_game_state)
@@ -1432,6 +1591,14 @@ namespace mbh_platformer
                         if (start_game.is_released)
                         {
                             set_game_state(game_state.gameplay);
+                        }
+                        break;
+                    }
+                case game_state.gameplay_dead:
+                    {
+                        if (time_in_state >= 240)
+                        {
+                            set_game_state(game_state.game_over);
                         }
                         break;
                     }
@@ -1445,7 +1612,7 @@ namespace mbh_platformer
                     }
             }
 
-            for(int i = 0; i < objs.Count; i++)
+            for (int i = 0; i < objs.Count; i++)
             {
                 objs[i]._update60();
             }
@@ -1461,6 +1628,7 @@ namespace mbh_platformer
 
         public override void _draw()
         {
+            pal();
             palt(0, false);
             palt(11, true);
             cls(0);
@@ -1477,8 +1645,14 @@ namespace mbh_platformer
             switch (cur_game_state)
             {
                 case game_state.gameplay:
+                case game_state.gameplay_dead:
                     {
+                        //pal(7, 0);
+                        //pal(6, 5);
+                        //pal(5, 6);
+                        //pal(0, 7);
                         map(0, 0, 0, 0, 16, 16);
+                        //pal();
                         break;
                     }
             }
@@ -1498,6 +1672,53 @@ namespace mbh_platformer
                         print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
                         str = "-dx-";
                         print(str, 128 - (str.Length * 0.5f) * 4, 120 + 6, 7);
+                        break;
+                    }
+                case game_state.gameplay:
+                    {
+                        if (time_in_state < 15)
+                        {
+                            pal(7, 5, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else if (time_in_state < 30)
+                        {
+                            pal(7, 6, 1);
+                            pal(6, 5, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        break;
+                    }
+                case game_state.gameplay_dead:
+                    {
+                        if (time_in_state < 120)
+                        {
+
+                        }
+                        else if (time_in_state < 150)
+                        {
+                            pal(7, 6, 1);
+                            pal(6, 5, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else if (time_in_state < 180)
+                        {
+                            pal(7, 5, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else
+                        {
+                            pal(7, 0, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
                         break;
                     }
                 case game_state.game_over:
