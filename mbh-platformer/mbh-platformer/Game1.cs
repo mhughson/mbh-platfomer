@@ -126,6 +126,10 @@ namespace mbh_platformer
             public int h;
             public int cw;
             public int ch;
+            public int jump_hold_time = 0;//how long jump is held
+            public bool grounded = false;//on ground
+            public int airtime = 0;//time since groundeds
+            public float scaley = 0;
 
             public bool is_platform = false;
 
@@ -302,7 +306,7 @@ namespace mbh_platformer
                                     }
 
                                     sspr((f * 8) % 128, flr((f / 16)) * 8, 8, 8,
-                                        x2, y2, 8, 8,
+                                        x2, y2 - (scaley * v_count) + (((8) - (8 - scaley)) * num_vert), 8, 8 - scaley,
                                         flipx2, flipy2);
 
                                 }
@@ -436,6 +440,219 @@ namespace mbh_platformer
             }
         }
 
+        public class badguy : sprite
+        {
+            int local_ticks = 0;
+
+            float max_dx = 9999;
+            float max_dy = 9999;
+
+            float grav = 0.1f;
+
+            bool solid = true;
+
+            int dead_time = -1;
+
+            public badguy()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=5,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(320, 2, 2),
+                                create_anim_frame(322, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+                cw = 16;
+                ch = 16;
+
+                dx = -0.5f;
+            }
+
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                local_ticks += 1;
+
+                //limit walk speed
+
+                dx = mid(-max_dx, dx, max_dx);
+
+                //move in x
+
+                x += dx;
+
+
+                if (solid)
+                {
+                    var old_dx = dx;
+                    Vector2 hit_point;
+                    if (inst.collide_side(this, out hit_point))
+                    {
+                        dx = -old_dx;
+                    }
+                }
+
+
+                //move in y
+
+                dy += grav;
+
+                dy = mid(-max_dy, dy, max_dy);
+
+                y += dy;
+
+                // TODO:
+                //if (flying != nil)
+                //{
+                //    var t60 = local_ticks / 60;
+
+                //    if (flying.horz == true)
+                //    {
+
+                //        x = ix + ((sin(t60 / flying.duration) + 1) * 0.5) * flying.dist;
+                //    }
+                //    else
+                //    {
+                //        y = iy + ((sin(t60 / flying.duration) + 1) * 0.5) * flying.dist;
+
+                //    }
+                //}
+
+
+                if (solid)
+                {
+                    inst.collide_floor(this);
+                    inst.collide_roof(this);
+                }
+
+                // ENEMY SPECIFIC:
+                // 
+
+                if (dx < 0)
+                {
+                    flipx = true;
+                }
+                else if (dx > 0) // let 0 maintain.
+                {
+                    flipx = false;
+                }
+
+                // TODO:
+                if (dead_time >= 0)
+                {
+                    dead_time -= 1;
+
+                    if (dead_time <= 0)
+                    {
+                        inst.objs.Remove(this);
+                    }
+
+                    return;
+                }
+
+                // TODO
+                //if (dead_time == -1 && !inst.p.is_dead && inst.p.pipe == null)
+                if (dead_time == -1 && inst.cur_game_state != game_state.gameplay_dead)
+                {
+
+                    if (inst.intersects_obj_obj(inst.p, this))
+                    {
+                        // TODO
+                        //if (inst.p.star_time > 0)
+                        //{
+                        //    self: on_bounce(p1);
+                        //}
+                        //else
+                        {
+                            //feet pos.
+                            var my = inst.p.y + (inst.p.h * 0.5f);
+
+                            if (inst.p.get_is_dashing())
+                            {
+                                //Vector2 pos = new Vector2(x, y);
+                                //inst.p.start_dash_bounce(ref pos);
+                                //dx = inst.p.dx;
+                                //inst.p.dx *= -1;
+                                on_bounce(inst.p);
+                            }
+                            else if (y > my)
+                            {
+                                if (inst.p.dy >= 0)
+                                {
+                                    on_stomp();
+                                }
+                            }
+                            else
+                            {
+                                //self:on_attack(p1);
+                                inst.p.on_take_hit(this);
+                            }
+                        }
+                    }
+                }
+
+                base._update60();
+            }
+
+            protected virtual void on_bounce(sprite attacker)
+            {
+                // TODO: UNTESTED
+
+
+                // TODO
+                //hp -= 1
+
+                if (dead_time == -1) // TODO: && hp == 0 then
+                {
+                    dead_time = 240;
+
+                    dx = Math.Sign(x - attacker.x) * 0.5f;
+
+                    dy = -3;
+
+                    solid = false;
+
+                    flipy = true;
+
+                    // TODO:
+                    //flying = null;
+                    grav = 0.1f;
+
+                }
+            }
+
+            protected virtual void on_stomp()
+            {
+                scaley = 4;
+                dead_time = 60;
+                dx = 0;
+                dy = 0;
+                float amount = -0.5f;
+                if (btn(4))
+                {
+                    amount = -1.0f;
+                }
+                inst.p.dy = inst.p.max_dy * amount;
+            }
+        }
+
         public class rock : sprite
         {
             public rock()
@@ -467,8 +684,8 @@ namespace mbh_platformer
                 is_platform = true;
             }
 
-            float tick = 0;
-            bool hit_this_frame = false;
+            protected float tick = 0;
+            protected bool hit_this_frame = false;
             public override void _update60()
             {
                 if (inst.hit_pause.is_paused())
@@ -492,7 +709,7 @@ namespace mbh_platformer
                 tick += 0.005f;
                 //y = 964 - (cos(tick) * 64.0f);
                 y = 964;// - (cos(tick) * 64.0f);
-                x = 80 - (cos(tick) * 64.0f);
+                x += 80 - (cos(tick) * 64.0f);
 
                 if (touching_player)
                 {
@@ -539,6 +756,65 @@ namespace mbh_platformer
             }
         }
 
+        public class rock_pendulum : rock
+        {
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                var self = this;
+
+                hit_this_frame = false;
+
+                // TODO: Error - This assumes a collision means you are standing on top!
+                var touching_player = inst.intersects_box_box(inst.p.x, inst.p.y + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.x, self.y, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                //var touching_player = inst.intersects_obj_obj(self, inst.p);
+
+                var old_x = self.x;
+
+                var old_y = self.y;
+
+                //base._update60();
+                tick += 0.0025f;
+                //y = 964 - (cos(tick) * 64.0f);
+                //y = 964;// - (cos(tick) * 64.0f);
+                x += (cos(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
+                y += (sin(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
+
+                if (touching_player)
+                {
+                    hit_this_frame = true;
+                    inst.p.x += self.x - old_x;
+                    inst.p.y += self.y - old_y;
+
+                    //inst.p.dx = self.x - old_x;
+                    //inst.p.dy = self.y - old_y;
+
+                    //inst.p.platformed = true;
+                }
+                else
+                {
+                    inst.p.platformed = false;
+                }
+
+                if (tick >= 0.5f)
+                {
+                    inst.change_meta_tile(flr(x/8), flr(y/8), new int[] { 868, 869, 884, 885 });
+                    inst.objs.Remove(this);
+                }
+
+                // Should be handled by collide side.
+                //if (inst.p.dash_time > 0 && inst.intersects_obj_obj(this, inst.p))
+                //{
+                //    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
+                //    inst.p.start_dash_bounce(ref v);
+                //}
+            }
+        }
+
         //make the player
         public class player : sprite
         {
@@ -558,15 +834,11 @@ namespace mbh_platformer
             complex_button jump_button = new complex_button(4);
             complex_button dash_button = new complex_button(5);
 
-            public int jump_hold_time = 0;//how long jump is held
             int min_jump_press = 0;//min time jump can be held
             int max_jump_press = 12;//max time jump can be held
 
             bool jump_btn_released = true;//can we jump again?
-            public bool grounded = false;//on ground
             public bool platformed = false;
-
-            public int airtime = 0;//time since groundeds
 
             public player() : base()
             {
@@ -648,7 +920,7 @@ namespace mbh_platformer
                 };
 
                 x = 159;
-                y = 932;
+                y = 932 - 32 * 8;
                 dx = 0;
                 dy = 0;
                 w = 32;
@@ -672,8 +944,19 @@ namespace mbh_platformer
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     inst.objs.Add(new block_restorer(mx, my, 240));
                 }
+                if (fget(mget(mx, my), 3))
+                {
+                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+                    Point map_point = inst.map_pos_to_meta_tile(mx, my);
+                    inst.objs.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
+                }
 
                 inst.hit_pause.start_pause(hit_pause_manager.pause_reason.bounce);
+            }
+
+            public bool get_is_dashing()
+            {
+                return dash_time > 0;
             }
 
             //call once per tick.
@@ -718,7 +1001,7 @@ namespace mbh_platformer
                     }
                 }
 
-                bool is_dashing = dash_time > 0;
+                bool is_dashing = get_is_dashing();
 
                 //move left/right
                 if (!is_dashing)
@@ -867,31 +1150,24 @@ namespace mbh_platformer
                 //roof
                 inst.collide_roof(self);
 
-                if (fget(mget(flr(x/8), flr(y/8)), 1))
+                float dist = 8.0f;
+                Tuple<float, float>[] hit_tests = new Tuple<float, float>[]
                 {
-                    inst.set_game_state(game_state.gameplay_dead);
-                    inst.hit_pause.start_pause(hit_pause_manager.pause_reason.death);
+                    new Tuple<float, float>(-dist * 0.5f, 0),
+                    new Tuple<float, float>(dist * 0.5f, 0),
+                    new Tuple<float, float>(0, -dist),
+                    new Tuple<float, float>(0, dist),
+                };
 
-                    Tuple<float, float>[] death_dirs = new Tuple<float, float>[]
+                foreach (var h in hit_tests)
+                {
+                    int cell_x = flr(((x + h.Item1) / 8));
+                    int cell_y = flr(((y + h.Item2) / 8));
+                    if (fget(mget(cell_x, cell_y), 1))
                     {
-                        new Tuple<float, float>(-1.0f, 0.0f),
-                        new Tuple<float, float>( 1.0f, 0.0f),
-                        new Tuple<float, float>( 0.0f, 1.0f),
-                        new Tuple<float, float>( 0.0f,-1.0f),
-                        new Tuple<float, float>(-0.7f,-0.7f),
-                        new Tuple<float, float>( 0.7f,-0.7f),
-                        new Tuple<float, float>( 0.7f, 0.7f),
-                        new Tuple<float, float>(-0.7f, 0.7f),
-                    };
+                        on_take_hit(null);
 
-                    foreach (var dir in death_dirs)
-                    {
-                        simple_fx_death_spark o = new simple_fx_death_spark(dir.Item1, dir.Item2)
-                        {
-                            x = x,
-                            y = y,
-                        };
-                        inst.objs.Add(o);
+                        break;
                     }
                 }
 
@@ -964,6 +1240,34 @@ namespace mbh_platformer
                 set_anim(next_anim);
 
                 base._update60();
+            }
+
+            public void on_take_hit(sprite attacker)
+            {
+                inst.set_game_state(game_state.gameplay_dead);
+                inst.hit_pause.start_pause(hit_pause_manager.pause_reason.death);
+
+                Tuple<float, float>[] death_dirs = new Tuple<float, float>[]
+                {
+                        new Tuple<float, float>(-1.0f, 0.0f),
+                        new Tuple<float, float>( 1.0f, 0.0f),
+                        new Tuple<float, float>( 0.0f, 1.0f),
+                        new Tuple<float, float>( 0.0f,-1.0f),
+                        new Tuple<float, float>(-0.7f,-0.7f),
+                        new Tuple<float, float>( 0.7f,-0.7f),
+                        new Tuple<float, float>( 0.7f, 0.7f),
+                        new Tuple<float, float>(-0.7f, 0.7f),
+                };
+
+                foreach (var dir in death_dirs)
+                {
+                    simple_fx_death_spark o = new simple_fx_death_spark(dir.Item1, dir.Item2)
+                    {
+                        x = x,
+                        y = y,
+                    };
+                    inst.objs.Add(o);
+                }
             }
 
             public override void _draw()
@@ -1152,7 +1456,7 @@ namespace mbh_platformer
         //check if pushing into side tile and resolve.
         //requires self.dx,self.x,self.y, and 
         //assumes tile flag 0 == solid
-        bool collide_side(player self, out Vector2 hit_point)
+        bool collide_side(sprite self, out Vector2 hit_point)
         {
             // Don't do collision of the player isn't moving sideways.
             //if (self.dx == 0)
@@ -1199,7 +1503,7 @@ namespace mbh_platformer
             // Left Tiles
             dir = -1.0f;
             offset_x *= -1.0f;
-            correction_x = 7.0f;
+            correction_x = 8.0f;
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
                 if (fget(mget(flr((self.x + (offset_x)) / 8), flr((self.y + i) / 8)), 0))
@@ -1270,7 +1574,7 @@ namespace mbh_platformer
         //check if pushing into floor tile and resolve.
         //requires self.dx,self.x,self.y,self.grounded,self.airtime and 
         //assumes tile flag 0 or 1 == solid
-        bool collide_floor(player self)
+        bool collide_floor(sprite self)
         {
             //only check for ground when falling.
             if (self.dy < 0)
@@ -1342,7 +1646,7 @@ namespace mbh_platformer
         //check if pushing into roof tile and resolve.
         //requires self.dy,self.x,self.y, and 
         //assumes tile flag 0 == solid
-        bool collide_roof(player self)
+        bool collide_roof(sprite self)
         {
             if (self.dy > 0)
             {
@@ -1411,7 +1715,7 @@ namespace mbh_platformer
             Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
             {
                 { pause_reason.bounce, 0 }, // no pause for now. happens too much.
-                { pause_reason.death, 10 }
+                { pause_reason.death, 30 }
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -1530,6 +1834,10 @@ namespace mbh_platformer
 
                         p = new player();
                         objs.Add(new rock());
+                        for (int i = 0; i < 10; i++)
+                        {
+                            objs.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
+                        }
                         objs.Add(p);
                         game_cam = new cam(p);
                         break;
