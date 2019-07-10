@@ -118,8 +118,16 @@ namespace mbh_platformer
 
         public class sprite : PicoXObj
         {
+            public class flying_def
+            {
+                public bool horz = true;
+                public int duration = 0;
+                public int dist = 0;
+            }
             public float x;
             public float y;
+            public float x_initial;
+            public float y_initial;
             public float dx;
             public float dy;
             public int w;
@@ -132,6 +140,9 @@ namespace mbh_platformer
             public float scaley = 0;
 
             public bool is_platform = false;
+            public bool stay_on = false;
+
+            public flying_def flying = null;
 
             public struct anim
             {
@@ -440,6 +451,54 @@ namespace mbh_platformer
             }
         }
 
+        public class simple_fx_rotor : simple_fx
+        {
+            public simple_fx_rotor()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "explode",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks=5,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                // dupes to give it time to leave screen.
+                                create_anim_frame(324, 2, 1),
+                                create_anim_frame(326, 2, 1),
+                                create_anim_frame(324, 2, 1),
+                                create_anim_frame(326, 2, 1),
+                                create_anim_frame(324, 2, 1),
+                                create_anim_frame(326, 2, 1),
+                                create_anim_frame(324, 2, 1),
+                                create_anim_frame(326, 2, 1),
+                                create_anim_frame(324, 2, 1),
+                                create_anim_frame(326, 2, 1),
+                                create_anim_frame(324, 2, 1),
+                                create_anim_frame(326, 2, 1),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("explode");
+
+                w = 16;
+                h = 8;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                dy += -0.1f; // grav
+                y += dy;
+            }
+        }
+
         public class badguy : sprite
         {
             int local_ticks = 0;
@@ -447,11 +506,11 @@ namespace mbh_platformer
             float max_dx = 9999;
             float max_dy = 9999;
 
-            float grav = 0.1f;
+            protected float grav = 0.1f;
 
             bool solid = true;
 
-            int dead_time = -1;
+            public int dead_time = -1;
 
             public badguy()
             {
@@ -479,6 +538,8 @@ namespace mbh_platformer
                 ch = 16;
 
                 dx = -0.5f;
+
+                stay_on = true;
             }
 
             public override void _update60()
@@ -519,21 +580,29 @@ namespace mbh_platformer
                 y += dy;
 
                 // TODO:
-                //if (flying != nil)
-                //{
-                //    var t60 = local_ticks / 60;
+                if (flying != null)
+                {
+                    var t60 = local_ticks / 60.0f;
 
-                //    if (flying.horz == true)
-                //    {
+                    if (flying.horz == true)
+                    {
+                        float start_x = x;
+                        x = x_initial + ((sin(t60 / flying.duration) + 1) * 0.5f) * flying.dist;
+                        if (x < start_x)
+                        {
+                            flipx = true;
+                        }
+                        else if (x > start_x)
+                        {
+                            flipx = false;
+                        }
+                    }
+                    else
+                    {
+                        y = y_initial + ((sin(t60 / flying.duration) + 1) * 0.5f) * flying.dist;
 
-                //        x = ix + ((sin(t60 / flying.duration) + 1) * 0.5) * flying.dist;
-                //    }
-                //    else
-                //    {
-                //        y = iy + ((sin(t60 / flying.duration) + 1) * 0.5) * flying.dist;
-
-                //    }
-                //}
+                    }
+                }
 
 
                 if (solid)
@@ -591,6 +660,12 @@ namespace mbh_platformer
                                 //dx = inst.p.dx;
                                 //inst.p.dx *= -1;
                                 on_bounce(inst.p);
+
+                                if (flying != null)
+                                {
+                                    Vector2 pos = new Vector2(x, y);
+                                    inst.p.start_dash_bounce(ref pos);
+                                }
                             }
                             else if (y > my)
                             {
@@ -650,6 +725,96 @@ namespace mbh_platformer
                     amount = -1.0f;
                 }
                 inst.p.dy = inst.p.max_dy * amount;
+            }
+        }
+
+        public class chopper_body : badguy
+        {
+            public chopper_body()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=5,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(340, 2, 3),
+                                create_anim_frame(342, 2, 3),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+            }
+        }
+
+        public class chopper : badguy
+        {
+            public chopper()
+            {
+                flying = new flying_def()
+                {
+                    duration = 7,
+                    dist = 96,
+                    horz = true,
+                };
+
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=5,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(324, 2, 3),
+                                create_anim_frame(326, 2, 3),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 24;
+                cw = 16;
+                ch = 18;
+
+                dx = 0;
+                dy = 0;
+                grav = 0;
+
+                stay_on = false;
+                flipx = true;
+            }
+
+            protected override void on_stomp()
+            {
+                base.on_stomp();
+
+                inst.objs.Add(new chopper_body()
+                {
+                    x = x,
+                    y = y + 4,
+                    flipx = flipx,
+                    dx = 0,
+                    dy = 0,
+                });
+                inst.objs.Add(new simple_fx_rotor()
+                {
+                    x = x,
+                    y = y - 8,
+                    flipx = flipx,
+                    dx = 0,
+                    dy = -0.5f,
+                });
+                inst.objs.Remove(this);
             }
         }
 
@@ -1601,7 +1766,7 @@ namespace mbh_platformer
 
                 if (fget(mget(flr((box_x + i) / 8), y), 0))
                 {
-                    new_y = (flr(y) * 8) - (self.h * 0.5f);
+                    new_y = (flr(y) * 8) - (self.ch * 0.5f);
                     break;
                 }
             }
@@ -1621,7 +1786,7 @@ namespace mbh_platformer
                             // objects when moving away from them.
                             if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
                             {
-                                new_y = (/*flr*/(v.y - v.h * 0.5f)) - (self.h * 0.5f);
+                                new_y = (/*flr*/(v.y - v.ch * 0.5f)) - (self.ch * 0.5f);
                                 break;
                             }
                         }
@@ -1637,10 +1802,14 @@ namespace mbh_platformer
                 self.airtime = 0;
                 return true;
             }
-            else
+
+            if (self.stay_on)
             {
-                return false;
+                self.dx *= -1;
+                self.x += self.dx;
             }
+
+            return false;
         }
 
         //check if pushing into roof tile and resolve.
@@ -1838,8 +2007,23 @@ namespace mbh_platformer
                         {
                             objs.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
                         }
+                        objs.Add(new badguy() { x = 19 * 8, y = 97 * 8 });
+                        objs.Add(new chopper() { x = 31 * 8, y = 85 * 8 });
+                        objs.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
+                        objs.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
+                        objs.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
                         objs.Add(p);
                         game_cam = new cam(p);
+
+                        foreach(PicoXObj o in objs)
+                        {
+                            sprite s = o as sprite;
+                            if (s != null)
+                            {
+                                s.x_initial = s.x;
+                                s.y_initial = s.y;
+                            }
+                        }
                         break;
                     }
                 default:
