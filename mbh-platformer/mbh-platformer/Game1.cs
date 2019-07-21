@@ -134,6 +134,10 @@ namespace mbh_platformer
             public int h;
             public int cw;
             public int ch;
+            public int cx_offset { get; protected set; } = 0;
+            public int cy_offset { get; protected set; } = 0;
+            public float cx { get { return x + cx_offset; } }
+            public float cy { get { return y + cy_offset; } }
             public int jump_hold_time = 0;//how long jump is held
             public bool grounded = false;//on ground
             public int airtime = 0;//time since groundeds
@@ -201,6 +205,11 @@ namespace mbh_platformer
 
             public void tick_anim()
             {
+                if (anims == null || !anims.ContainsKey(curanim))
+                {
+                    return;
+                }
+
                 animtick -= 1;
                 if (animtick <= 0)
                 {
@@ -212,8 +221,11 @@ namespace mbh_platformer
                     {
                         if (a.loop == false)
                         {
+                            // back up the frame counter so that we sit on the last frame.
+                            // do it before calling anim_done, because that might actually trigger
+                            // a new animation and we don't want to mess with its frame.
+                            curframe--;
                             event_on_anim_done?.Invoke(curanim); // TODO_PORT
-                            curframe--; // back up the frame counter
                         }
                         else
                         {
@@ -236,6 +248,11 @@ namespace mbh_platformer
             {
                 var self = this;
                 base._draw();
+
+                if (anims == null)
+                {
+                    return;
+                }
 
                 var a = anims[curanim];
                 int[] frame = a.frames[curframe];
@@ -332,21 +349,24 @@ namespace mbh_platformer
                     }
                 }
 
-                /*
-                pset(x, y, 14);
-                rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
-                rect(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 15);
+                if (inst.time_in_state % 2 == 0)
+                {
+                    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
+                    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
+                }
+                pset(x, y, 8);
+                pset(cx, cy, 9);
 
                 // bottom
-                var offset_x = self.cw / 3.0f;
-                var offset_y = self.ch / 2.0f;
-                for (float i = -(offset_x); i <= (offset_x); i += 2)
-                {
-                    pset(x + i, y + offset_y, 9);
-                }
-                
+                //var offset_x = self.cw / 3.0f;
+                //var offset_y = self.ch / 2.0f;
+                //for (float i = -(offset_x); i <= (offset_x); i += 2)
+                //{
+                //    pset(x + i, y + offset_y, 9);
+                //}
+
                 // sides
-                */
+
             }
         }
 
@@ -512,6 +532,8 @@ namespace mbh_platformer
 
             public int dead_time = -1;
 
+            public bool insta_death = false;
+
             public badguy()
             {
                 anims = new Dictionary<string, anim>()
@@ -649,6 +671,12 @@ namespace mbh_platformer
                         //    self: on_bounce(p1);
                         //}
                         //else
+
+                        if (insta_death)
+                        {
+                            inst.p.on_take_hit(this);
+                        }
+                        else
                         {
                             //feet pos.
                             var my = inst.p.y + (inst.p.h * 0.5f);
@@ -784,7 +812,8 @@ namespace mbh_platformer
                 w = 16;
                 h = 24;
                 cw = 16;
-                ch = 18;
+                ch = 16;
+                cy_offset = 4;
 
                 dx = 0;
                 dy = 0;
@@ -818,6 +847,202 @@ namespace mbh_platformer
             }
         }
 
+        public class lava_splash : badguy
+        {
+            public lava_splash()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=10,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(368, 3, 2),
+                                create_anim_frame(371, 3, 2),
+                                create_anim_frame(374, 3, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 24;
+                h = 16;
+                cw = 24;
+                ch = 8;
+                cy_offset = 4;
+
+                dx = 0;
+
+                insta_death = true;
+
+                event_on_anim_done += delegate (string anim_name)
+                {
+                    inst.objs.Remove(this);
+                };
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                //if (curframe == 1)
+                //{
+                //    insta_death = true;
+                //}
+                //else
+                //{
+                //    insta_death = false;
+                //}
+            }
+        }
+
+        public class lava_blast_spawner : sprite
+        {
+            int ticks;
+            float dir;
+            int life_time;
+            float speed;
+
+            public lava_blast_spawner(float dir)
+            {
+                this.dir = dir;
+                life_time = 10 * 5;
+                speed = 16;
+            }
+
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                ticks++;
+
+                if (ticks % 5 == 0)
+                {
+                    x += dir * speed;// * (rnd(8) + 8);
+                    if (fget(mget(flr(x/8.0f), flr(y/8.0f)), 0))
+                    {
+                        inst.objs.Remove(this);
+                        return;
+                    }
+                    inst.objs.Add(new lava_splash() { x = x, y = y, flipx = dir < 0 ? true : false, /*, dx = rnd(1) * dir*/});
+                }
+
+                base._update60();
+            }
+        }
+
+        public class lava_blaster : badguy
+        {
+            int idle_ticks = 0;
+
+            public lava_blaster(float dir)
+            {
+
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "idle",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=30,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(400, 3, 3),
+                                create_anim_frame(403, 3, 3),
+                            }
+                        }
+                    },
+                    {
+                        "open_mouth",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks=5,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(406, 3, 3),
+                                create_anim_frame(409, 3, 3),
+                            }
+                        }
+                    },
+                    {
+                        "fire",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks=5,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(409, 3, 3),
+                                create_anim_frame(409, 3, 3),
+                                create_anim_frame(409, 3, 3),
+                                create_anim_frame(409, 3, 3),
+                                create_anim_frame(409, 3, 3),
+                                create_anim_frame(406, 3, 3),
+                                create_anim_frame(400, 3, 3),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("idle");
+
+                w = 24;
+                h = 24;
+                cw = 24;
+                ch = 24;
+
+                dx = 0;
+
+                flipx = dir < 0;
+
+                event_on_anim_done += delegate (string anim_name)
+                {
+                    if (dead_time > 0)
+                    {
+                        return;
+                    }
+                    if (anim_name == "open_mouth")
+                    {
+                        inst.objs.Add(new lava_blast_spawner(flipx ? -1 : 1) { x = x, y = y + 4 });
+                        set_anim("fire");
+                    }
+                    else if (anim_name == "fire")
+                    {
+                        set_anim("idle");
+                    }
+                };
+            }
+
+            public override void _update60()
+            {
+                if (dead_time > 0)
+                {
+                    set_anim("open_mouth");
+                }
+                else if (curanim == "idle")
+                {
+                    idle_ticks++;
+                    if (idle_ticks > 180)
+                    {
+                        set_anim("open_mouth");
+                        idle_ticks = 0;
+                    }
+                }
+                base._update60();
+            }
+        }
+
         public class rock : sprite
         {
             public rock()
@@ -839,8 +1064,6 @@ namespace mbh_platformer
 
                 set_anim("default");
 
-                x = 80;
-                y = 964 + 64; ;// - 64;
                 w = 16;
                 h = 16;
                 cw = 16;
@@ -863,18 +1086,19 @@ namespace mbh_platformer
                 hit_this_frame = false;
 
                 // TODO: Error - This assumes a collision means you are standing on top!
-                var touching_player = inst.intersects_box_box(inst.p.x, inst.p.y + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.x, self.y, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                var touching_player = inst.intersects_box_box(inst.p.cx, inst.p.cy + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
                 //var touching_player = inst.intersects_obj_obj(self, inst.p);
 
                 var old_x = self.x;
 
                 var old_y = self.y;
 
-                base._update60();
-                tick += 0.005f;
+                //base._update60();
+                tick += 0.0025f;
                 //y = 964 - (cos(tick) * 64.0f);
-                y = 964;// - (cos(tick) * 64.0f);
-                x += 80 - (cos(tick) * 64.0f);
+                //y = 964;// - (cos(tick) * 64.0f);
+                x += (cos(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
+                //y += (sin(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
 
                 if (touching_player)
                 {
@@ -892,32 +1116,18 @@ namespace mbh_platformer
                     inst.p.platformed = false;
                 }
 
+                //if (tick >= 0.5f)
+                //{
+                //    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 });
+                //    inst.objs.Remove(this);
+                //}
+
                 // Should be handled by collide side.
                 //if (inst.p.dash_time > 0 && inst.intersects_obj_obj(this, inst.p))
                 //{
                 //    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
                 //    inst.p.start_dash_bounce(ref v);
                 //}
-            }
-
-            public override void _draw()
-            {
-                base._draw();
-
-                if (hit_this_frame)
-                {
-                    //rectfill(x - cw / 2, y - ch / 2, x + cw / 2, y + ch / 2, 8);
-                }
-
-                //var w = (cw - 2) * 0.5f;
-                //var h = ch * 0.5f;
-                //var x2 = this.x;
-                //var y2 = this.y + 16;
-                //var left = x2 - w;
-                //var top = y2 - h;
-                //var right = x2 + w;
-                //var bottom = y2 + h;
-                //rect(left, top, right, bottom, 4);
             }
         }
 
@@ -935,7 +1145,7 @@ namespace mbh_platformer
                 hit_this_frame = false;
 
                 // TODO: Error - This assumes a collision means you are standing on top!
-                var touching_player = inst.intersects_box_box(inst.p.x, inst.p.y + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.x, self.y, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                var touching_player = inst.intersects_box_box(inst.p.cx, inst.p.cy + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
                 //var touching_player = inst.intersects_obj_obj(self, inst.p);
 
                 var old_x = self.x;
@@ -1004,6 +1214,9 @@ namespace mbh_platformer
 
             bool jump_btn_released = true;//can we jump again?
             public bool platformed = false;
+
+            int jump_count = 0;
+            int max_jump_count = 2;
 
             public player() : base()
             {
@@ -1093,6 +1306,8 @@ namespace mbh_platformer
 
                 cw = 16;
                 ch = 24;
+                //cx_offset = 8;
+                //cy_offset = 6;
             }
 
             public void start_dash_bounce(ref Vector2 hit_point)
@@ -1261,9 +1476,18 @@ namespace mbh_platformer
                         var new_jump_btn = self.jump_button.ticks_down < 10;
                         //is player continuing a jump
                         //or starting a new one?
-                        if (self.jump_hold_time > 0 || (on_ground && new_jump_btn))
+                        if (self.jump_hold_time > 0 || (on_ground && new_jump_btn) || (jump_count < max_jump_count && is_dashing && new_jump_btn))
                         {
                             //if (self.jump_hold_time == 0) sfx(snd.jump);//new jump snd // TODO_PORT
+                            if (self.jump_hold_time == 0)
+                            {
+                                // Additional jumps get a little effect to show that it is special
+                                if (jump_count != 0)
+                                {
+                                    inst.objs.Add(new simple_fx() { x = x, y = y + h * 0.5f });
+                                }
+                                jump_count++;
+                            }
 
                             self.jump_hold_time += 1;
                             //keep applying jump velocity
@@ -1310,24 +1534,33 @@ namespace mbh_platformer
 
                     self.grounded = false;
                     self.airtime += 1;
+                    if (self.airtime >= 5 && jump_count == 0)
+                    {
+                        // We fell of a ledge. eat a jump so that you can't fall->jump->jump to get further.
+                        jump_count++;
+                    }
+                }
+                else
+                {
+                    jump_count = 0;
                 }
 
                 //roof
                 inst.collide_roof(self);
-
-                float dist = 8.0f;
+                
                 Tuple<float, float>[] hit_tests = new Tuple<float, float>[]
                 {
-                    new Tuple<float, float>(-dist * 0.5f, 0),
-                    new Tuple<float, float>(dist * 0.5f, 0),
-                    new Tuple<float, float>(0, -dist),
-                    new Tuple<float, float>(0, dist),
+                    new Tuple<float, float>(-cw * 0.25f, 0),
+                    new Tuple<float, float>(cw * 0.25f, 0),
+                    new Tuple<float, float>(0, -ch * 0.25f),
+                    new Tuple<float, float>(0, ch * 0.25f),
                 };
 
+                // Seach for spike in towards the center of 4 edges of player.
                 foreach (var h in hit_tests)
                 {
-                    int cell_x = flr(((x + h.Item1) / 8));
-                    int cell_y = flr(((y + h.Item2) / 8));
+                    int cell_x = flr(((cx + h.Item1) / 8));
+                    int cell_y = flr(((cy + h.Item2) / 8));
                     if (fget(mget(cell_x, cell_y), 1))
                     {
                         on_take_hit(null);
@@ -1563,18 +1796,18 @@ namespace mbh_platformer
         {
             //return intersects_box_box(a.x,a.y,a.w,a.h,b.x,b.y,b.w,b.h)
             return intersects_box_box(
-                a.x, a.y, a.cw * 0.5f, a.ch * 0.5f,
-                b.x, b.y, b.cw * 0.5f, b.ch * 0.5f);
+                a.cx, a.cy, a.cw * 0.5f, a.ch * 0.5f,
+                b.cx, b.cy, b.cw * 0.5f, b.ch * 0.5f);
         }
 
         bool intersects_obj_box(sprite a, float x1, float y1, float w1, float h1)
         {
-            return intersects_box_box(a.x, a.y, a.cw * 0.5f, a.ch * 0.5f, x1, y1, w1, h1);
+            return intersects_box_box(a.cx, a.cy, a.cw * 0.5f, a.ch * 0.5f, x1, y1, w1, h1);
         }
 
         bool intersects_point_obj(float px, float py, sprite b)
         {
-            return intersects_point_box(px, py, b.x, b.y, b.cw * 0.5f, b.ch * 0.5f);
+            return intersects_point_box(px, py, b.cx, b.cy, b.cw * 0.5f, b.ch * 0.5f);
         }
 
         //point to box intersection.
@@ -1653,12 +1886,12 @@ namespace mbh_platformer
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
 
-                if (fget(mget(flr((self.x + (offset_x)) / 8), flr((self.y + i) / 8)), 0))
+                if (fget(mget(flr((self.cx + (offset_x)) / 8), flr((self.cy + i) / 8)), 0))
                 {
                     self.dx = 0;
-                    self.x = (flr(((self.x + (offset_x)) / 8)) * 8) + correction_x - (offset_x);
-                    hit_point.X = self.x + (offset_x);
-                    hit_point.Y = self.y + i;
+                    self.x = (flr(((self.cx + (offset_x)) / 8)) * 8) + correction_x - (offset_x) - (self.cx_offset);
+                    hit_point.X = self.cx + (offset_x);
+                    hit_point.Y = self.cy + i;
                     //return true;
                     hit = true;
                 }
@@ -1671,12 +1904,12 @@ namespace mbh_platformer
             correction_x = 8.0f;
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
-                if (fget(mget(flr((self.x + (offset_x)) / 8), flr((self.y + i) / 8)), 0))
+                if (fget(mget(flr((self.cx + (offset_x)) / 8), flr((self.cy + i) / 8)), 0))
                 {
                     self.dx = 0;
-                    self.x = (flr(((self.x + (offset_x)) / 8)) * 8) + correction_x - (offset_x);
-                    hit_point.X = self.x + (offset_x) - 1;
-                    hit_point.Y = self.y + i;
+                    self.x = (flr(((self.cx + (offset_x)) / 8)) * 8) + correction_x - (offset_x) - (self.cx_offset);
+                    hit_point.X = self.cx + (offset_x) - 1;
+                    hit_point.Y = self.cy + i;
                     //return true;
                     hit = true;
                 }
@@ -1696,17 +1929,17 @@ namespace mbh_platformer
 
                         // check for collision minus the top 2 pixels and the bottom 2 pixels (hence -4)
                         //if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
-                        if (intersects_box_box(self.x - self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                        if (intersects_box_box(self.cx - self.cw * 0.5f, self.cy, 0.5f, self.ch / 3.0f, v.cx, v.cy, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                         {
                             self.dx = 0;
                             //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
                             // +1 is to fix a bug where the player seems to get sucked into the side of platforms
                             // when pushed.
-                            self.x = (/*flr*/(v.x + v.cw * 0.5f)) + (self.cw * 0.5f) + 1.0f;
+                            self.x = (/*flr*/(v.cx + v.cw * 0.5f)) + (self.cw * 0.5f) - self.cx_offset + 1.0f;
 
                             // We don't really know the hit point, so just put it at the center on the edge that hit.
-                            hit_point.X = self.x + (offset_x);
-                            hit_point.Y = self.y;
+                            hit_point.X = self.cx + (offset_x);
+                            hit_point.Y = self.cy;
 
                             //return true;
                             hit = true;
@@ -1714,15 +1947,14 @@ namespace mbh_platformer
 
                         // Right objects.
 
-                        if (intersects_box_box(self.x + self.cw * 0.5f, self.y, 0.5f, self.ch / 3.0f, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
+                        if (intersects_box_box(self.cx + self.cw * 0.5f, self.cy, 0.5f, self.ch / 3.0f, v.cx, v.cy, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                         {
                             self.dx = 0;
-                            //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
-                            self.x = (/*flr*/(v.x - v.cw * 0.5f)) - (self.cw * 0.5f) - 1.0f;
+                            self.x = (/*flr*/(v.cx - v.cw * 0.5f)) - (self.cw * 0.5f) - self.cx_offset - 1.0f;
 
                             // We don't really know the hit point, so just put it at the center on the edge that hit.
-                            hit_point.X = self.x + (offset_x);
-                            hit_point.Y = self.y;
+                            hit_point.X = self.cx + (offset_x);
+                            hit_point.Y = self.cy;
 
                             //return true;
                             hit = true;
@@ -1756,17 +1988,18 @@ namespace mbh_platformer
 
             for (float i = -(offset_x); i <= (offset_x); i += 2)
             {
-                var box_x = self.x;
-                var box_y = self.y;
+                var box_x = self.cx;
+                var box_y = self.cy;
                 var box_w_half = self.cw * 0.5f;
                 var box_h_half = self.ch * 0.5f;
 
 
                 var y = flr((box_y + box_h_half) / 8);
+                var y_actual = flr((self.y + box_h_half) / 8);
 
                 if (fget(mget(flr((box_x + i) / 8), y), 0))
                 {
-                    new_y = (flr(y) * 8) - (self.ch * 0.5f);
+                    new_y = (flr(y) * 8) - box_h_half + (self.y - self.cy);
                     break;
                 }
             }
@@ -1784,9 +2017,9 @@ namespace mbh_platformer
                             // Check a 1 pixel high box along the bottom the the player.
                             // Adding 2 to the solid because that is what solids do in their update to stick to
                             // objects when moving away from them.
-                            if (inst.intersects_box_box(self.x, self.y + self.ch * 0.5f, self.cw * 0.5f, 1, v.x, v.y, v.cw * 0.5f, (v.ch + 2) * 0.5f))
+                            if (inst.intersects_box_box(self.cx, self.cy + self.ch * 0.5f, self.cw * 0.5f, 1, v.cx, v.cy, v.cw * 0.5f, (v.ch + 2) * 0.5f))
                             {
-                                new_y = (/*flr*/(v.y - v.ch * 0.5f)) - (self.ch * 0.5f);
+                                new_y = (/*flr*/(v.cy - v.ch * 0.5f)) - (self.ch * 0.5f) - (self.cy_offset);
                                 break;
                             }
                         }
@@ -1831,10 +2064,10 @@ namespace mbh_platformer
 
             for (float i = -(offset_x); i <= (offset_x); i += 2)
             {
-                if (fget(mget(flr((self.x + i) / 8), flr((self.y - (offset_y)) / 8)), 0))
+                if (fget(mget(flr((self.cx + i) / 8), flr((self.cy - (offset_y)) / 8)), 0))
                 {
                     self.dy = 0;
-                    self.y = flr((self.y - (offset_y)) / 8) * 8 + 8 + (offset_y);
+                    self.y = flr((self.cy - (offset_y)) / 8) * 8 + 8 + (offset_y) - self.cy_offset;
                     self.jump_hold_time = 0;
                     hit_roof = true;
                     break;
@@ -1852,14 +2085,14 @@ namespace mbh_platformer
                         {
                             // Check a 1 pixel box along the bottom of the player.
                             // Using 0.5f because that seems more correct but im not totally sure.
-                            if (inst.intersects_box_box(self.x, self.y - self.ch * 0.5f, self.cw * 0.5f, 0.5f, v.x, v.y, v.cw * 0.5f, (v.ch) * 0.5f))
+                            if (inst.intersects_box_box(self.cx, self.cy - self.ch * 0.5f, self.cw * 0.5f, 0.5f, v.cx, v.cy, v.cw * 0.5f, (v.ch) * 0.5f))
                             {
                                 // Take the dy of the player or the solid, which ever is more downward.
                                 // This ensure that the player doesn't kind of "float" along the bottom of the
                                 // solid. We also min it to 0 so that if both are moving upwards, the player is
                                 // at least stopped.
                                 self.dy = min(0, max(v.dy, self.dy));
-                                self.y = (/*flr*/(v.y + v.ch * 0.5f)) + (self.ch * 0.5f);
+                                self.y = (/*flr*/(v.cy + v.ch * 0.5f)) + (self.ch * 0.5f) - self.cy_offset;
                                 self.jump_hold_time = 0;
                                 hit_roof = true;
 
@@ -2002,7 +2235,9 @@ namespace mbh_platformer
                         objs = new List<PicoXObj>();
 
                         p = new player();
-                        objs.Add(new rock());
+                        objs.Add(new rock() { x = 37 * 8, y = 97 * 8, });
+                        objs.Add(new rock() { x = 37 * 8, y = 89 * 8, });
+                        objs.Add(new rock() { x = 27 * 8, y = 107 * 8, });
                         for (int i = 0; i < 10; i++)
                         {
                             objs.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
@@ -2012,6 +2247,9 @@ namespace mbh_platformer
                         objs.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
                         objs.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
                         objs.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
+                        objs.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
+                        objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
+                        objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
                         objs.Add(p);
                         game_cam = new cam(p);
 
@@ -2084,6 +2322,14 @@ namespace mbh_platformer
                         {
                             set_game_state(game_state.gameplay);
                         }
+                        break;
+                    }
+                case game_state.gameplay:
+                    {
+                        //if (time_in_state % 120 == 0)
+                        //{
+                        //    objs.Add(new lava_blast_spawner() { x = 29 * 8, y = 93 * 8 });
+                        //}
                         break;
                     }
                 case game_state.gameplay_dead:
