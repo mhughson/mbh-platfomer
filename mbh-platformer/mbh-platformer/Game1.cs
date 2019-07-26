@@ -349,7 +349,7 @@ namespace mbh_platformer
                     }
                 }
 
-                if (inst.time_in_state % 2 == 0)
+                //if (inst.time_in_state % 2 == 0)
                 {
                     rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
                     rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
@@ -528,11 +528,15 @@ namespace mbh_platformer
 
             protected float grav = 0.1f;
 
-            bool solid = true;
+            protected bool solid = true;
+
+            bool bounced = false;
 
             public int dead_time = -1;
 
             public bool insta_death = false;
+
+            bool cleared_attacker = false;
 
             public badguy()
             {
@@ -602,7 +606,7 @@ namespace mbh_platformer
                 y += dy;
 
                 // TODO:
-                if (flying != null)
+                if (flying != null && dead_time == -1)
                 {
                     var t60 = local_ticks / 60.0f;
 
@@ -654,6 +658,26 @@ namespace mbh_platformer
                     {
                         inst.objs.Remove(this);
                     }
+                    else
+                    {
+                        if (!cleared_attacker)
+                        {
+                            if (!inst.intersects_obj_obj(inst.p, this))
+                            {
+                                cleared_attacker = true;
+                            }
+                        }
+
+                        if (cleared_attacker && bounced && !insta_death && inst.intersects_obj_obj(inst.p, this))
+                        {
+                            if (inst.p.get_is_dashing())
+                            {
+                                on_bounce(inst.p, true);
+                                Vector2 pos = new Vector2(x, y);
+                                inst.p.start_dash_bounce(ref pos);
+                            }
+                        }
+                    }
 
                     return;
                 }
@@ -672,16 +696,16 @@ namespace mbh_platformer
                         //}
                         //else
 
-                        if (insta_death)
-                        {
-                            inst.p.on_take_hit(this);
-                        }
-                        else
+                        //if (insta_death)
+                        //{
+                        //    inst.p.on_take_hit(this);
+                        //}
+                        //else
                         {
                             //feet pos.
-                            var my = inst.p.y + (inst.p.h * 0.5f);
+                            var player_bottom = inst.p.cy + (inst.p.ch * 0.5f);
 
-                            if (inst.p.get_is_dashing())
+                            if (inst.p.get_is_dashing() && !insta_death)
                             {
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.start_dash_bounce(ref pos);
@@ -695,9 +719,9 @@ namespace mbh_platformer
                                     inst.p.start_dash_bounce(ref pos);
                                 }
                             }
-                            else if (y > my)
+                            else if (cy > player_bottom)
                             {
-                                if (inst.p.dy >= 0)
+                                if (inst.p.dy >= 0 && !insta_death)
                                 {
                                     on_stomp();
                                 }
@@ -710,11 +734,11 @@ namespace mbh_platformer
                         }
                     }
                 }
-
+               
                 base._update60();
             }
 
-            protected virtual void on_bounce(sprite attacker)
+            protected virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
             {
                 // TODO: UNTESTED
 
@@ -722,11 +746,11 @@ namespace mbh_platformer
                 // TODO
                 //hp -= 1
 
-                if (dead_time == -1) // TODO: && hp == 0 then
+                if (dead_time == -1 || ignore_dead_time) // TODO: && hp == 0 then
                 {
                     dead_time = 240;
 
-                    dx = Math.Sign(x - attacker.x) * 0.5f;
+                    dx = Math.Sign(attacker.dx) * 0.5f;
 
                     dy = -3;
 
@@ -734,9 +758,13 @@ namespace mbh_platformer
 
                     flipy = true;
 
+                    bounced = true;
+
                     // TODO:
                     //flying = null;
                     grav = 0.1f;
+
+                    cleared_attacker = false;
 
                 }
             }
@@ -821,6 +849,7 @@ namespace mbh_platformer
 
                 stay_on = false;
                 flipx = true;
+                solid = false;
             }
 
             protected override void on_stomp()
@@ -928,13 +957,14 @@ namespace mbh_platformer
                 if (ticks % 5 == 0)
                 {
                     x += dir * speed;// * (rnd(8) + 8);
-                    if (fget(mget(flr(x/8.0f), flr(y/8.0f)), 0))
+                    if (fget(mget(flr(x/8.0f), flr(y/8.0f)), 0) || !fget(mget(flr(x / 8.0f), flr(y / 8.0f) + 1), 0))
                     {
                         inst.objs.Remove(this);
                         return;
                     }
                     inst.objs.Add(new lava_splash() { x = x, y = y, flipx = dir < 0 ? true : false, /*, dx = rnd(1) * dir*/});
                 }
+
 
                 base._update60();
             }
@@ -1198,7 +1228,7 @@ namespace mbh_platformer
             public float max_dx = 1;//max x speed
             public float max_dy = 4;//max y speed
             public float jump_speed = -2.5f;//jump veloclity
-            public float acc = 1.0f;//acceleration
+            public float acc = 1.0f;//0.15f;//acceleration
             public float dcc = 0.0f;//decceleration
             public float air_dcc = 0.95f;//air decceleration
             public float grav = 0.18f;
@@ -1313,6 +1343,7 @@ namespace mbh_platformer
             public void start_dash_bounce(ref Vector2 hit_point)
             {
                 dy = -8;
+                dx = 5 * -Math.Sign(hit_point.X - cx);
                 dash_time = 0;
                 dash_count = 0;
                 inst.objs.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
