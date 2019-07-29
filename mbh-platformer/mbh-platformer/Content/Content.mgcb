@@ -55,3 +55,6 @@
 #begin raw/test_map.tmx
 /copy:raw/test_map.tmx
 
+#begin raw/test_map_2.tmx
+/copy:raw/test_map_2.tmx
+

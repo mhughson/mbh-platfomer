@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using PicoX;
 using System.Collections.Generic;
 using System;
+using TiledSharp;
 
 namespace mbh_platformer
 {
@@ -1723,8 +1724,8 @@ namespace mbh_platformer
 
             //min and max positions of camera.
             //the edges of the level.
-            Vector2 pos_min = new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
-            Vector2 pos_max = new Vector2(368 - inst.Res.X * 0.5f, 1024 - inst.Res.Y * 0.5f);
+            public Vector2 pos_min = new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
+            public Vector2 pos_max = new Vector2(368 - inst.Res.X * 0.5f, 1024 - inst.Res.Y * 0.5f);
 
             int shake_remaining = 0;
             float shake_force = 0;
@@ -2263,9 +2264,34 @@ namespace mbh_platformer
                 case game_state.gameplay:
                     {
                         reloadmap(GetMapString());
-                        objs = new List<PicoXObj>();
 
-                        p = new player();
+                        Vector2 spawn_point = Vector2.Zero;
+                        Vector2 cam_area_min = Vector2.Zero;
+                        Vector2 cam_area_max = Vector2.Zero;
+
+                        TmxMap TmxMapData = new TmxMap(GetMapString());
+
+                        foreach (var group in TmxMapData.ObjectGroups)
+                        {
+                            foreach (var o in group.Objects)
+                            {
+                                if (string.Compare(o.Type, "spawn_point", true) == 0)
+                                {
+                                    spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
+                                }
+                                else if (string.Compare(o.Type, "cam_area", true) == 0)
+                                {
+                                    cam_area_min = new Vector2((float)o.X, (float)o.Y);
+                                    cam_area_max = new Vector2((float)o.X + (float)o.Width, (float)o.Y + (float)o.Height);
+                                }
+                            }
+                        }
+
+                        p = new player()
+                        {
+                            x = spawn_point.X,
+                            y = spawn_point.Y,
+                        };
                         objs.Add(new rock() { x = 37 * 8, y = 97 * 8, });
                         objs.Add(new rock() { x = 37 * 8, y = 89 * 8, });
                         objs.Add(new rock() { x = 27 * 8, y = 107 * 8, });
@@ -2282,7 +2308,11 @@ namespace mbh_platformer
                         objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
                         objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
                         objs.Add(p);
-                        game_cam = new cam(p);
+                        game_cam = new cam(p)
+                        {
+                            pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+                            pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+                        };
 
                         foreach(PicoXObj o in objs)
                         {
