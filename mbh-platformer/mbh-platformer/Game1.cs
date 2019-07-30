@@ -148,6 +148,13 @@ namespace mbh_platformer
 
             public flying_def flying = null;
 
+            public float hp_max = 1;
+            public float hp = 1;
+            public float attack_power = 1;
+
+            protected int invul_time = 0;
+            protected int invul_time_on_hit = 120;
+
             public struct anim
             {
                 public int ticks;
@@ -239,6 +246,7 @@ namespace mbh_platformer
 
             public override void _update60()
             {
+                invul_time = (int)max(0, invul_time - 1);
                 base._update60();
 
                 tick_anim();
@@ -262,6 +270,7 @@ namespace mbh_platformer
 
                 // Mono8 Port: Starting with table only style.
                 //if type(frame) == "table" then
+                if (invul_time == 0 || invul_time % 2 == 0)
                 {
                     var final_w = a.w ?? w;
                     var final_h = a.h ?? h;
@@ -740,13 +749,9 @@ namespace mbh_platformer
 
             protected virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
             {
-                // TODO: UNTESTED
+                hp -= 1;
 
-
-                // TODO
-                //hp -= 1
-
-                if (dead_time == -1 || ignore_dead_time) // TODO: && hp == 0 then
+                if ((dead_time == -1 || ignore_dead_time) && hp == 0)
                 {
                     dead_time = 240;
 
@@ -1325,6 +1330,18 @@ namespace mbh_platformer
                             frames= new int[][] { create_anim_frame(60-16, 4, 5, 1), },
                         }
                     },
+                    {
+                        "taking_hit",
+                        new anim()
+                        {
+                            h = 32,
+                            ticks=1,//how long is each frame shown.
+                            frames= new int[][]
+                            {
+                                create_anim_frame(172, 4, 4),
+                            },//what frames are shown.
+                        }
+                    },
                 };
 
                 x = 159;
@@ -1338,6 +1355,9 @@ namespace mbh_platformer
                 ch = 24;
                 //cx_offset = 8;
                 //cy_offset = 6;
+
+                hp_max = 3;
+                hp = 3;
             }
 
             public void start_dash_bounce(ref Vector2 hit_point)
@@ -1382,6 +1402,13 @@ namespace mbh_platformer
 
                 string next_anim = curanim;
 
+                if (invul_time > (invul_time_on_hit * 0.6f))
+                {
+                    x += dx;
+                    set_anim("taking_hit");
+                    base._update60();
+                    return;
+                }
 
                 //if( inst.collide_floor(self))
                 //{
@@ -1673,11 +1700,22 @@ namespace mbh_platformer
 
             public void on_take_hit(sprite attacker)
             {
-                inst.set_game_state(game_state.gameplay_dead);
-                inst.hit_pause.start_pause(hit_pause_manager.pause_reason.death);
-
-                Tuple<float, float>[] death_dirs = new Tuple<float, float>[]
+                if (invul_time > 0)
                 {
+                    return;
+                }
+
+                hp -= attacker.attack_power;
+                invul_time = 120;
+                dx = Math.Sign(cx - attacker.cx) * 0.25f;
+
+                if (hp <= 0)
+                {
+                    inst.set_game_state(game_state.gameplay_dead);
+                    inst.hit_pause.start_pause(hit_pause_manager.pause_reason.death);
+
+                    Tuple<float, float>[] death_dirs = new Tuple<float, float>[]
+                    {
                         new Tuple<float, float>(-1.0f, 0.0f),
                         new Tuple<float, float>( 1.0f, 0.0f),
                         new Tuple<float, float>( 0.0f, 1.0f),
@@ -1686,16 +1724,17 @@ namespace mbh_platformer
                         new Tuple<float, float>( 0.7f,-0.7f),
                         new Tuple<float, float>( 0.7f, 0.7f),
                         new Tuple<float, float>(-0.7f, 0.7f),
-                };
-
-                foreach (var dir in death_dirs)
-                {
-                    simple_fx_death_spark o = new simple_fx_death_spark(dir.Item1, dir.Item2)
-                    {
-                        x = x,
-                        y = y,
                     };
-                    inst.objs.Add(o);
+
+                    foreach (var dir in death_dirs)
+                    {
+                        simple_fx_death_spark o = new simple_fx_death_spark(dir.Item1, dir.Item2)
+                        {
+                            x = x,
+                            y = y,
+                        };
+                        inst.objs.Add(o);
+                    }
                 }
             }
 
@@ -2431,7 +2470,32 @@ namespace mbh_platformer
                 o._draw();
             }
 
+            // HUD
+
+            Action draw_health = () =>
+            {
+                if (p == null)
+                {
+                    return;
+                }
+
+                int y_pos = 1;
+
+                for (int i = 0; i < p.hp_max; i++)
+                {
+                    int id = 238;
+                    if (i < p.hp)
+                    {
+                        id = 230;
+                    }
+                    spr(id, 1, y_pos, 2, 2);
+                    y_pos += 16;
+                }
+            };
+
             camera(0, 0);
+
+            draw_health();
 
             switch (cur_game_state)
             {
