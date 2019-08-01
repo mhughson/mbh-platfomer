@@ -363,12 +363,12 @@ namespace mbh_platformer
                 }
 
                 //if (inst.time_in_state % 2 == 0)
-                //{
-                //    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
-                //    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
-                //}
-                //pset(x, y, 8);
-                //pset(cx, cy, 9);
+                {
+                    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
+                    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
+                }
+                pset(x, y, 8);
+                pset(cx, cy, 9);
 
                 // bottom
                 //var offset_x = self.cw / 3.0f;
@@ -1229,6 +1229,156 @@ namespace mbh_platformer
             }
         }
 
+        public class player_topdown : sprite
+        {
+            public float dest_x = 0;
+            public float dest_y = 0;
+
+            public float walk_speed = 1.0f;
+
+            public Vector2 desired_dir = Vector2.Zero;
+
+            public player_topdown()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "idle",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=4,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(224, 2, 2),
+                                create_anim_frame(226, 2, 2),
+                                create_anim_frame(228, 2, 2),
+                                create_anim_frame(226, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("idle");
+                
+                w = 16;
+                h = 16;
+
+                event_on_anim_done = null;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                // Calculate prior to moving so that if we reach the
+                // destination, we still remember what direction we
+                // we going.
+
+                if (dest_x != x)
+                {
+                    float delta = dest_x - x;
+                    float dir = Math.Sign(delta);
+                    x += dir * min(walk_speed, abs(delta));
+                }
+                if (dest_y != y)
+                {
+                    float delta = dest_y - y;
+                    float dir = Math.Sign(delta);
+                    y += dir * min(walk_speed, abs(delta));
+                }
+                
+
+                const float tile_size = 16;
+                //Vector2 dest = new Vector2(dest_x, dest_y);
+
+                //if (btnp(0) && desired_dir != -Vector2.UnitX && !fget(mget(flr(dest.X/8 - 2), flr(dest_y/8)), 0))
+                //{
+                //    desired_dir = -Vector2.UnitX;
+                //}
+                //else if (btnp(1) && desired_dir != Vector2.UnitX && !fget(mget(flr(dest.X/8 + 2), flr(dest_y/8)), 0))
+                //{
+                //    desired_dir = Vector2.UnitX;
+                //}
+                //else if (btnp(2) && desired_dir != -Vector2.UnitY && !fget(mget(flr(dest.X/8), flr(dest_y/8 - 2)), 0))
+                //{
+                //    desired_dir = -Vector2.UnitY;
+                //}
+                //else if (btnp(3) && desired_dir != Vector2.UnitY && !fget(mget(flr(dest.X/8), flr(dest_y/8 + 2)), 0))
+                //{
+                //    desired_dir = Vector2.UnitY;
+                //}
+                //else if (!btn(0) && !btn(1) && !btn(2) && !btn(3))
+                //{
+                //    desired_dir = Vector2.Zero;
+                //}
+
+                // Arrived at tile.
+                if (dest_x == x && dest_y == y)
+                {
+                    //dest_x += desired_dir.X * tile_size;
+                    //dest_y += desired_dir.Y * tile_size;
+
+                    bool new_dest = false;
+
+                    if (btn(0) && !new_dest)
+                    {
+                        dest_x -= tile_size;
+                        // Are we trying to walk into a wall?
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        {
+                            dest_x = x;
+                            dest_y = y;
+                        }
+                        else
+                        {
+                            new_dest = true;
+                        }
+                    }
+                    if (btn(1) && !new_dest)
+                    {
+                        dest_x += tile_size;
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        {
+                            dest_x = x;
+                            dest_y = y;
+                        }
+                        else
+                        {
+                            new_dest = true;
+                        }
+                    }
+                    if (btn(2) && !new_dest)
+                    {
+                        dest_y -= tile_size;
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        {
+                            dest_x = x;
+                            dest_y = y;
+                        }
+                        else
+                        {
+                            new_dest = true;
+                        }
+                    }
+                    if (btn(3) && !new_dest)
+                    {
+                        dest_y += tile_size;
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        {
+                            dest_x = x;
+                            dest_y = y;
+                        }
+                        else
+                        {
+                            new_dest = true;
+                        }
+                    }
+                }
+            }
+        }
+
         //make the player
         public class player : sprite
         {
@@ -1800,7 +1950,7 @@ namespace mbh_platformer
         public class cam : PicoXObj
         {
 
-            player tar;//target to follow.
+            sprite tar;//target to follow.
             Vector2 pos;
 
             //how far from center of screen target must
@@ -1817,7 +1967,7 @@ namespace mbh_platformer
             int shake_remaining = 0;
             float shake_force = 0;
 
-            public cam(player target)
+            public cam(sprite target)
             {
                 tar = target;
                 pos = new Vector2(target.x, target.y);
@@ -2421,7 +2571,16 @@ namespace mbh_platformer
                         objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
                         objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
                         objs.Add(p);
-                        game_cam = new cam(p)
+                        player_topdown pt = new player_topdown()
+                        {
+                            x = flr(spawn_point.X / 16.0f) * 16.0f + 8.0f,
+                            y = flr(spawn_point.Y / 16.0f) * 16.0f + 8.0f,
+                        };
+                        pt.dest_x = pt.x;
+                        pt.dest_y = pt.y;
+
+                        objs.Add(pt);
+                        game_cam = new cam(pt)
                         {
                             pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
                             pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
