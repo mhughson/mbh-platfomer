@@ -134,7 +134,7 @@
 </data>
  </layer>
  <objectgroup name="Object Layer 1">
-  <object id="1" name="camera" type="cam_area" x="0" y="0" width="360" height="1008"/>
+  <object id="1" name="camera" type="cam_area" x="0" y="0" width="368" height="1008"/>
   <object id="2" name="default" type="spawn_point" x="96" y="632" width="32" height="24"/>
  </objectgroup>
 </map>

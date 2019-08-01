@@ -750,7 +750,7 @@ namespace mbh_platformer
 
             protected virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
             {
-                hp -= 1;
+                hp = max(0, hp - 1);
 
                 if ((dead_time == -1 || ignore_dead_time) && hp == 0)
                 {
@@ -1615,14 +1615,20 @@ namespace mbh_platformer
                     new Tuple<float, float>(0, ch * 0.25f),
                 };
 
-                // Seach for spike in towards the center of 4 edges of player.
+                // Search for spike in towards the center of 4 edges of player.
                 foreach (var h in hit_tests)
                 {
                     int cell_x = flr(((cx + h.Item1) / 8));
                     int cell_y = flr(((cy + h.Item2) / 8));
                     if (fget(mget(cell_x, cell_y), 1))
                     {
-                        on_take_hit(null);
+                        // placeholder to do massive damage.
+                        sprite temp = new sprite()
+                        {
+                            attack_power = float.MaxValue,
+                        };
+
+                        on_take_hit(temp);
 
                         break;
                     }
