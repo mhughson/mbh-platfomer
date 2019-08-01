@@ -363,12 +363,12 @@ namespace mbh_platformer
                 }
 
                 //if (inst.time_in_state % 2 == 0)
-                {
-                    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
-                    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
-                }
-                pset(x, y, 8);
-                pset(cx, cy, 9);
+                //{
+                //    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
+                //    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
+                //}
+                //pset(x, y, 8);
+                //pset(cx, cy, 9);
 
                 // bottom
                 //var offset_x = self.cw / 3.0f;
@@ -2571,6 +2571,7 @@ namespace mbh_platformer
                         //pal(5, 6);
                         //pal(0, 7);
                         map(0, 0, 0, 0, 16, 16);
+                        //map(0, 0, 0, 0, 16, 16, 0, 1); // easy mode?
                         //pal();
                         break;
                     }
@@ -2718,5 +2719,7 @@ namespace mbh_platformer
         //public Vector2 Res = new Vector2(160, 144); // GB
 
         public override Tuple<int, int> GetResolution() { return new Tuple<int, int>((int)Res.X, (int)Res.Y); }
+
+        public override int GetGifScale() { return 2; }
     }
 }
