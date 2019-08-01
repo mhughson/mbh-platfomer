@@ -62,6 +62,9 @@ namespace mbh_platformer
                 }
                 P8API = inst;
             }
+
+            public virtual void _preupdate() { }
+            public virtual void _postupdate() { }
         }
 
         //helper for more complex
@@ -680,7 +683,7 @@ namespace mbh_platformer
 
                         if (cleared_attacker && bounced && !insta_death && inst.intersects_obj_obj(inst.p, this))
                         {
-                            if (inst.p.get_is_dashing())
+                            if (inst.p.get_is_dashing() || inst.p.dashing_last_frame)
                             {
                                 on_bounce(inst.p, true);
                                 Vector2 pos = new Vector2(x, y);
@@ -715,7 +718,7 @@ namespace mbh_platformer
                             //feet pos.
                             var player_bottom = inst.p.cy + (inst.p.ch * 0.5f);
 
-                            if (inst.p.get_is_dashing() && !insta_death)
+                            if ((inst.p.get_is_dashing() || inst.p.dashing_last_frame) && !insta_death)
                             {
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.start_dash_bounce(ref pos);
@@ -1254,6 +1257,14 @@ namespace mbh_platformer
             int jump_count = 0;
             int max_jump_count = 2;
 
+            // Hack to solve cash where player hits 2 flying enemies in the same frame.
+            // First enemy starts playing dash bouncing, and second sees he isn't jumping
+            // and does damage.
+            // Note: I think a better, more general solution, would be to make player invul
+            //       for a short time after dash bouncing, or possibly even let them attack
+            //       during that time.
+            public bool dashing_last_frame { get; private set; }
+
             public player() : base()
             {
                 //animation definitions.
@@ -1389,6 +1400,30 @@ namespace mbh_platformer
             public bool get_is_dashing()
             {
                 return dash_time > 0;
+            }
+
+            public override void _preupdate()
+            {
+                base._preupdate();
+
+                if (inst.hit_pause.is_paused() || (inst.cur_game_state == game_state.gameplay_dead))
+                {
+                    return;
+                }
+
+                if (invul_time > (invul_time_on_hit * 0.6f))
+                {
+                    return;
+                }
+                
+                if (dash_time > 0)
+                {
+                    dashing_last_frame = true;
+                }
+                else
+                {
+                    dashing_last_frame = false;
+                }
             }
 
             //call once per tick.
@@ -1535,31 +1570,36 @@ namespace mbh_platformer
                         var new_jump_btn = self.jump_button.ticks_down < 10;
                         //is player continuing a jump
                         //or starting a new one?
-                        if (self.jump_hold_time > 0 || (on_ground && new_jump_btn) || (jump_count < max_jump_count && is_dashing && new_jump_btn))
+                        if (self.jump_hold_time > 0)
                         {
-                            //if (self.jump_hold_time == 0) sfx(snd.jump);//new jump snd // TODO_PORT
-                            if (self.jump_hold_time == 0)
-                            {
-                                // Additional jumps get a little effect to show that it is special
-                                if (jump_count != 0)
-                                {
-                                    inst.objs.Add(new simple_fx() { x = x, y = y + h * 0.5f });
-                                }
-                                jump_count++;
-                            }
-
                             self.jump_hold_time += 1;
                             //keep applying jump velocity
                             //until max jump time.
                             if (self.jump_hold_time < self.max_jump_press)
                             {
-
                                 self.dy = self.jump_speed;//keep going up while held
-
                             }
 
                             dash_time = 0;
                             is_dashing = false;
+                        }
+                        else if ((on_ground && new_jump_btn && jump_count == 0))
+                        {
+                            jump_hold_time += 1;
+                            jump_count++;
+                            dash_time = 0;
+                            is_dashing = false;
+                            self.dy = self.jump_speed;
+                        }
+                        else if (jump_count < max_jump_count && is_dashing && jump_button.is_pressed)
+                        {
+                            // Additional jumps get a little effect to show that it is special
+                            inst.objs.Add(new simple_fx() { x = x, y = y + h * 0.5f });
+                            jump_hold_time += 1;
+                            jump_count++;
+                            dash_time = 0;
+                            is_dashing = false;
+                            self.dy = self.jump_speed;
                         }
                     }
                     else
@@ -1715,6 +1755,8 @@ namespace mbh_platformer
                 hp -= attacker.attack_power;
                 invul_time = 120;
                 dx = Math.Sign(cx - attacker.cx) * 0.25f;
+                dy = 0;
+                jump_hold_time = 0;
 
                 if (hp <= 0)
                 {
@@ -1820,6 +1862,22 @@ namespace mbh_platformer
                 if (self.pos.Y > self.pos_max.Y) self.pos.Y = self.pos_max.Y;
 
             }
+
+            //public void activate_objs()
+            //{
+            //    for (int i = Game.game_world.cur_area.objs_queue.Count - 1; i >= 0; i--)
+            //    {
+            //        obj v = Game.game_world.cur_area.objs_queue[i];
+
+            //        Rectangle area = spawn_rect();
+            //        if (v.x <= (area.Right + v.w_half()) && v.x >= (area.Left - v.w_half()) && v.y <= (area.Bottom + v.h_half()) && v.y >= (area.Top - v.h_half()))
+            //        //if (v.x < x)
+            //        {
+            //            // move to active list.
+            //            v.activate();
+            //        }
+            //    }
+            //}
 
             public Vector2 cam_pos()
             {
@@ -2329,6 +2387,16 @@ namespace mbh_platformer
                                     cam_area_min = new Vector2((float)o.X, (float)o.Y);
                                     cam_area_max = new Vector2((float)o.X + (float)o.Width, (float)o.Y + (float)o.Height);
                                 }
+                                else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
+                                {
+                                    objs.Add(
+                                            new chopper()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
                             }
                         }
 
@@ -2455,10 +2523,17 @@ namespace mbh_platformer
                         break;
                     }
             }
-
+            for (int i = 0; i < objs.Count; i++)
+            {
+                objs[i]._preupdate();
+            }
             for (int i = 0; i < objs.Count; i++)
             {
                 objs[i]._update60();
+            }
+            for (int i = 0; i < objs.Count; i++)
+            {
+                objs[i]._postupdate();
             }
             if (game_cam != null)
             {
@@ -2611,7 +2686,7 @@ namespace mbh_platformer
 
         public override string GetMapString()
         {
-            return "Content/raw/test_map.tmx";
+            return "Content/raw/test_map_2.tmx";
         }
 
         public override Dictionary<int, string> GetMusicPaths()
