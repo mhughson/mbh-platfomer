@@ -261,104 +261,103 @@ namespace mbh_platformer
                 var self = this;
                 base._draw();
 
-                if (anims == null)
+                if (anims != null && !String.IsNullOrEmpty(curanim))
                 {
-                    return;
-                }
 
-                var a = anims[curanim];
-                int[] frame = a.frames[curframe];
+                    var a = anims[curanim];
+                    int[] frame = a.frames[curframe];
 
-                // TODO: Mono8 Port
-                //if (pal) push_pal(pal)
+                    // TODO: Mono8 Port
+                    //if (pal) push_pal(pal)
 
-                // Mono8 Port: Starting with table only style.
-                //if type(frame) == "table" then
-                if (invul_time == 0 || invul_time % 2 == 0)
-                {
-                    var final_w = a.w ?? w;
-                    var final_h = a.h ?? h;
-                    var final_w_half = flr(final_w * 0.5f);
-                    var final_h_half = flr(final_h * 0.5f);
-
-                    var start_x = x - (final_w_half);
-                    var start_y = y - (final_h_half);
-
-                    var count = 0;
-
-                    var num_vert = flr(final_h / 8);
-                    var num_horz = flr(final_w / 8);
-
-                    var inc_x = 8;
-                    var inc_y = 8;
-
-                    if (flipx)
+                    // Mono8 Port: Starting with table only style.
+                    //if type(frame) == "table" then
+                    if (invul_time == 0 || invul_time % 2 == 0)
                     {
-                        start_x = start_x + ((num_horz - 1) * 8);
-                        inc_x = -8;
-                    }
+                        var final_w = a.w ?? w;
+                        var final_h = a.h ?? h;
+                        var final_w_half = flr(final_w * 0.5f);
+                        var final_h_half = flr(final_h * 0.5f);
 
+                        var start_x = x - (final_w_half);
+                        var start_y = y - (final_h_half);
 
-                    if (flipy)
-                    {
-                        start_y = start_y + ((num_vert - 1) * 8);
-                        inc_y = -8;
-                    }
+                        var count = 0;
 
-                    var y2 = start_y;
+                        var num_vert = flr(final_h / 8);
+                        var num_horz = flr(final_w / 8);
 
-                    for (int v_count = 0; v_count < num_vert; v_count++)
-                    {
-                        var x2 = start_x;
+                        var inc_x = 8;
+                        var inc_y = 8;
 
-                        for (int h_count = 0; h_count < num_horz; h_count++)
+                        if (flipx)
                         {
-                            //draw in frame order, but from
-                            // right to left.
-                            var f = frame[count];
+                            start_x = start_x + ((num_horz - 1) * 8);
+                            inc_x = -8;
+                        }
 
-                            // Don't draw sprite 0. This allows us to use that as a special 
-                            // sprite in our animation data.
-                            if (f != 0)
+
+                        if (flipy)
+                        {
+                            start_y = start_y + ((num_vert - 1) * 8);
+                            inc_y = -8;
+                        }
+
+                        var y2 = start_y;
+
+                        for (int v_count = 0; v_count < num_vert; v_count++)
+                        {
+                            var x2 = start_x;
+
+                            for (int h_count = 0; h_count < num_horz; h_count++)
                             {
+                                //draw in frame order, but from
+                                // right to left.
+                                var f = frame[count];
 
-                                var flipx2 = flipx;
-
-                                var flipy2 = flipy;
-
-                                // Mono8 Port: frame is an int can can't be null.
-                                //if (f != null)
+                                // Don't draw sprite 0. This allows us to use that as a special 
+                                // sprite in our animation data.
+                                if (f != 0)
                                 {
-                                    // TODO: This doesn't properly support flipping collections of tiles (eg. turn a 3 tile high 
-                                    // sprite upside down. it will flip each tile independently).
-                                    if (f < 0)
+
+                                    var flipx2 = flipx;
+
+                                    var flipy2 = flipy;
+
+                                    // Mono8 Port: frame is an int can can't be null.
+                                    //if (f != null)
                                     {
-                                        f = (int)abs(f);
+                                        // TODO: This doesn't properly support flipping collections of tiles (eg. turn a 3 tile high 
+                                        // sprite upside down. it will flip each tile independently).
+                                        if (f < 0)
+                                        {
+                                            f = (int)abs(f);
 
-                                        flipx2 = !flipx2;
+                                            flipx2 = !flipx2;
+                                        }
+
+                                        // Hack to allow flipping Y. Add 512 to your sprite id.
+                                        if (f >= 9999)
+                                        {
+                                            f -= 9999;
+
+                                            flipy2 = !flipy2;
+                                        }
+
+                                        sspr((f * 8) % 128, flr((f / 16)) * 8, 8, 8,
+                                            x2, y2 - (scaley * v_count) + (((8) - (8 - scaley)) * num_vert), 8, 8 - scaley,
+                                            flipx2, flipy2);
+
                                     }
-
-                                    // Hack to allow flipping Y. Add 512 to your sprite id.
-                                    if (f >= 9999)
-                                    {
-                                        f -= 9999;
-
-                                        flipy2 = !flipy2;
-                                    }
-
-                                    sspr((f * 8) % 128, flr((f / 16)) * 8, 8, 8,
-                                        x2, y2 - (scaley * v_count) + (((8) - (8 - scaley)) * num_vert), 8, 8 - scaley,
-                                        flipx2, flipy2);
-
                                 }
-                            }
-                            count += 1;
+                                count += 1;
 
-                            x2 += inc_x;
+                                x2 += inc_x;
+
+                            }
+                            y2 += inc_y;
 
                         }
-                        y2 += inc_y;
-
                     }
                 }
 
@@ -2500,6 +2499,31 @@ namespace mbh_platformer
             }
         }
 
+        public class map_link : sprite
+        {
+            public string dest_map_path;
+
+            public map_link()
+            {
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.intersects_obj_obj(this, inst.p.pawn))
+                {
+                    inst.queued_map = dest_map_path;
+                }
+            }
+
+            public override void _draw()
+            {
+                // do nothing.
+                base._draw();
+            }
+        }
+
         public enum game_state
         {
             main_menu,
@@ -2519,6 +2543,9 @@ namespace mbh_platformer
         complex_button start_game;
 
         public hit_pause_manager hit_pause;
+
+        public string current_map = "Content/raw/test_map_2.tmx";
+        public string queued_map = "Content/raw/test_map_2.tmx";
 
         public Game1() : base()
         {
@@ -2559,6 +2586,9 @@ namespace mbh_platformer
             {
                 case game_state.gameplay:
                     {
+                        current_map = queued_map;
+
+                        objs.Clear();
                         reloadmap(GetMapString());
 
                         Vector2 spawn_point = Vector2.Zero;
@@ -2577,35 +2607,35 @@ namespace mbh_platformer
                                 {
                                     spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
 
-                                    if (o.Properties.ContainsKey("type"))
+                                    // mandatory field.
+                                    switch (o.Properties["type"])
                                     {
-                                        string t = o.Properties["type"];
-
-                                        switch(t)
-                                        {
-                                            case "top":
+                                        case "top":
+                                            {
+                                                pawn = new player_top()
                                                 {
-                                                    pawn = new player_top()
-                                                    {
-                                                        x = flr(spawn_point.X / 16.0f) * 16.0f + 8.0f,
-                                                        y = flr(spawn_point.Y / 16.0f) * 16.0f + 8.0f,
-                                                    };
-                                                    (pawn as player_top).dest_x = pawn.x;
-                                                    (pawn as player_top).dest_y = pawn.y;
+                                                    x = flr(spawn_point.X / 16.0f) * 16.0f + 8.0f,
+                                                    y = flr(spawn_point.Y / 16.0f) * 16.0f + 8.0f,
+                                                    w = 16,
+                                                    h = 16,
+                                                    cw = 16,
+                                                    ch = 16,
+                                                };
+                                                (pawn as player_top).dest_x = pawn.x;
+                                                (pawn as player_top).dest_y = pawn.y;
 
-                                                    break;
-                                                }
+                                                break;
+                                            }
 
-                                            case "side":
+                                        case "side":
+                                            {
+                                                pawn = new player_side()
                                                 {
-                                                    pawn = new player_side()
-                                                    {
-                                                        x = spawn_point.X,
-                                                        y = spawn_point.Y,
-                                                    };
-                                                    break;
-                                                }
-                                        }
+                                                    x = spawn_point.X,
+                                                    y = spawn_point.Y,
+                                                };
+                                                break;
+                                            }
                                     }
                                 }
                                 else if (string.Compare(o.Type, "cam_area", true) == 0)
@@ -2622,6 +2652,26 @@ namespace mbh_platformer
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
                                             }
                                         );
+                                }
+                                else if (string.Compare(o.Type, "map_link", true) == 0)
+                                {
+                                    map_link ml = new map_link()
+                                    {
+                                        x = (float)o.X + ((float)o.Width * 0.5f),
+                                        y = (float)o.Y + ((float)o.Height * 0.5f),
+                                        w = (int)o.Width,
+                                        h = (int)o.Height,
+                                    };
+                                    ml.cw = ml.w;
+                                    ml.ch = ml.h;
+
+                                    string dest_map_path;
+                                    if (o.Properties.TryGetValue("dest_map_path", out dest_map_path))
+                                    {
+                                        ml.dest_map_path = dest_map_path;
+                                    }
+
+                                    objs.Add(ml);
                                 }
                             }
                         }
@@ -2772,6 +2822,11 @@ namespace mbh_platformer
             {
                 hit_pause._update60();
             }
+
+            if (queued_map != GetMapString())
+            {
+                set_game_state(game_state.gameplay);
+            }
         }
 
         public override void _draw()
@@ -2916,7 +2971,7 @@ namespace mbh_platformer
 
         public override string GetMapString()
         {
-            return "Content/raw/test_map_2.tmx";
+            return current_map;
         }
 
         public override Dictionary<int, string> GetMusicPaths()
