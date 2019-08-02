@@ -675,19 +675,19 @@ namespace mbh_platformer
                     {
                         if (!cleared_attacker)
                         {
-                            if (!inst.intersects_obj_obj(inst.p, this))
+                            if (!inst.intersects_obj_obj(inst.p.pawn, this))
                             {
                                 cleared_attacker = true;
                             }
                         }
 
-                        if (cleared_attacker && bounced && !insta_death && inst.intersects_obj_obj(inst.p, this))
+                        if (cleared_attacker && bounced && !insta_death && inst.intersects_obj_obj(inst.p.pawn, this))
                         {
-                            if (inst.p.get_is_dashing() || inst.p.dashing_last_frame)
+                            if (inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame)
                             {
-                                on_bounce(inst.p, true);
+                                on_bounce(inst.p.pawn, true);
                                 Vector2 pos = new Vector2(x, y);
-                                inst.p.start_dash_bounce(ref pos);
+                                inst.p.pawn.start_dash_bounce(ref pos);
                             }
                         }
                     }
@@ -696,14 +696,14 @@ namespace mbh_platformer
                 }
 
                 // TODO
-                //if (dead_time == -1 && !inst.p.is_dead && inst.p.pipe == null)
+                //if (dead_time == -1 && !inst.p.pawn.is_dead && inst.p.pawn.pipe == null)
                 if (dead_time == -1 && inst.cur_game_state != game_state.gameplay_dead)
                 {
 
-                    if (inst.intersects_obj_obj(inst.p, this))
+                    if (inst.intersects_obj_obj(inst.p.pawn, this))
                     {
                         // TODO
-                        //if (inst.p.star_time > 0)
+                        //if (inst.p.pawn.star_time > 0)
                         //{
                         //    self: on_bounce(p1);
                         //}
@@ -711,30 +711,30 @@ namespace mbh_platformer
 
                         //if (insta_death)
                         //{
-                        //    inst.p.on_take_hit(this);
+                        //    inst.p.pawn.on_take_hit(this);
                         //}
                         //else
                         {
                             //feet pos.
-                            var player_bottom = inst.p.cy + (inst.p.ch * 0.5f);
+                            var player_bottom = inst.p.pawn.cy + (inst.p.pawn.ch * 0.5f);
 
-                            if ((inst.p.get_is_dashing() || inst.p.dashing_last_frame) && !insta_death)
+                            if ((inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame) && !insta_death)
                             {
                                 //Vector2 pos = new Vector2(x, y);
-                                //inst.p.start_dash_bounce(ref pos);
-                                //dx = inst.p.dx;
-                                //inst.p.dx *= -1;
-                                on_bounce(inst.p);
+                                //inst.p.pawn.start_dash_bounce(ref pos);
+                                //dx = inst.p.pawn.dx;
+                                //inst.p.pawn.dx *= -1;
+                                on_bounce(inst.p.pawn);
 
                                 if (flying != null)
                                 {
                                     Vector2 pos = new Vector2(x, y);
-                                    inst.p.start_dash_bounce(ref pos);
+                                    inst.p.pawn.start_dash_bounce(ref pos);
                                 }
                             }
                             else if (cy > player_bottom)
                             {
-                                if (inst.p.dy >= 0 && !insta_death)
+                                if (inst.p.pawn.dy >= 0 && !insta_death)
                                 {
                                     on_stomp();
                                 }
@@ -742,7 +742,7 @@ namespace mbh_platformer
                             else
                             {
                                 //self:on_attack(p1);
-                                inst.p.on_take_hit(this);
+                                inst.p.pawn.on_take_hit(this);
                             }
                         }
                     }
@@ -789,7 +789,7 @@ namespace mbh_platformer
                 {
                     amount = -1.0f;
                 }
-                inst.p.dy = inst.p.max_dy * amount;
+                inst.p.pawn.dy = inst.p.pawn.max_dy * amount;
             }
         }
 
@@ -1125,8 +1125,8 @@ namespace mbh_platformer
                 hit_this_frame = false;
 
                 // TODO: Error - This assumes a collision means you are standing on top!
-                var touching_player = inst.intersects_box_box(inst.p.cx, inst.p.cy + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
-                //var touching_player = inst.intersects_obj_obj(self, inst.p);
+                var touching_player = inst.intersects_box_box(inst.p.pawn.cx, inst.p.pawn.cy + inst.p.pawn.ch * 0.5f, inst.p.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                //var touching_player = inst.intersects_obj_obj(self, inst.p.pawn);
 
                 var old_x = self.x;
 
@@ -1142,17 +1142,17 @@ namespace mbh_platformer
                 if (touching_player)
                 {
                     hit_this_frame = true;
-                    inst.p.x += self.x - old_x;
-                    inst.p.y += self.y - old_y;
+                    inst.p.pawn.x += self.x - old_x;
+                    inst.p.pawn.y += self.y - old_y;
 
-                    //inst.p.dx = self.x - old_x;
-                    //inst.p.dy = self.y - old_y;
+                    //inst.p.pawn.dx = self.x - old_x;
+                    //inst.p.pawn.dy = self.y - old_y;
 
-                    //inst.p.platformed = true;
+                    //inst.p.pawn.platformed = true;
                 }
                 else
                 {
-                    inst.p.platformed = false;
+                    inst.p.pawn.platformed = false;
                 }
 
                 //if (tick >= 0.5f)
@@ -1162,10 +1162,10 @@ namespace mbh_platformer
                 //}
 
                 // Should be handled by collide side.
-                //if (inst.p.dash_time > 0 && inst.intersects_obj_obj(this, inst.p))
+                //if (inst.p.pawn.dash_time > 0 && inst.intersects_obj_obj(this, inst.p.pawn))
                 //{
-                //    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
-                //    inst.p.start_dash_bounce(ref v);
+                //    Vector2 v = new Vector2(x - (x - inst.p.pawn.x) * 0.5f, y - (y - inst.p.pawn.y) * 0.5f);
+                //    inst.p.pawn.start_dash_bounce(ref v);
                 //}
             }
         }
@@ -1184,8 +1184,8 @@ namespace mbh_platformer
                 hit_this_frame = false;
 
                 // TODO: Error - This assumes a collision means you are standing on top!
-                var touching_player = inst.intersects_box_box(inst.p.cx, inst.p.cy + inst.p.ch * 0.5f, inst.p.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
-                //var touching_player = inst.intersects_obj_obj(self, inst.p);
+                var touching_player = inst.intersects_box_box(inst.p.pawn.cx, inst.p.pawn.cy + inst.p.pawn.ch * 0.5f, inst.p.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                //var touching_player = inst.intersects_obj_obj(self, inst.p.pawn);
 
                 var old_x = self.x;
 
@@ -1201,17 +1201,17 @@ namespace mbh_platformer
                 if (touching_player)
                 {
                     hit_this_frame = true;
-                    inst.p.x += self.x - old_x;
-                    inst.p.y += self.y - old_y;
+                    inst.p.pawn.x += self.x - old_x;
+                    inst.p.pawn.y += self.y - old_y;
 
-                    //inst.p.dx = self.x - old_x;
-                    //inst.p.dy = self.y - old_y;
+                    //inst.p.pawn.dx = self.x - old_x;
+                    //inst.p.pawn.dy = self.y - old_y;
 
-                    //inst.p.platformed = true;
+                    //inst.p.pawn.platformed = true;
                 }
                 else
                 {
-                    inst.p.platformed = false;
+                    inst.p.pawn.platformed = false;
                 }
 
                 if (tick >= 0.5f)
@@ -1221,15 +1221,15 @@ namespace mbh_platformer
                 }
 
                 // Should be handled by collide side.
-                //if (inst.p.dash_time > 0 && inst.intersects_obj_obj(this, inst.p))
+                //if (inst.p.pawn.dash_time > 0 && inst.intersects_obj_obj(this, inst.p.pawn))
                 //{
-                //    Vector2 v = new Vector2(x - (x - inst.p.x) * 0.5f, y - (y - inst.p.y) * 0.5f);
-                //    inst.p.start_dash_bounce(ref v);
+                //    Vector2 v = new Vector2(x - (x - inst.p.pawn.x) * 0.5f, y - (y - inst.p.pawn.y) * 0.5f);
+                //    inst.p.pawn.start_dash_bounce(ref v);
                 //}
             }
         }
 
-        public class player_topdown : sprite
+        public class player_top : player_pawn
         {
             public float dest_x = 0;
             public float dest_y = 0;
@@ -1238,7 +1238,7 @@ namespace mbh_platformer
 
             public Vector2 desired_dir = Vector2.Zero;
 
-            public player_topdown()
+            public player_top()
             {
                 anims = new Dictionary<string, anim>()
                 {
@@ -1379,13 +1379,64 @@ namespace mbh_platformer
             }
         }
 
+        public class player_controller : sprite
+        {
+            public player_pawn pawn;
+
+            public player_controller()
+            {
+
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                pawn._update60();
+            }
+
+            public override void _draw()
+            {
+                base._draw();
+
+                pawn._draw();
+            }
+        }
+
+        public class player_pawn : sprite
+        {
+            public bool platformed = false;
+            public float max_dx = 1;//max x speed
+            public float max_dy = 4;//max y speed
+
+            // Hack to solve cash where player hits 2 flying enemies in the same frame.
+            // First enemy starts playing dash bouncing, and second sees he isn't jumping
+            // and does damage.
+            // Note: I think a better, more general solution, would be to make player invul
+            //       for a short time after dash bouncing, or possibly even let them attack
+            //       during that time.
+            public bool dashing_last_frame { get; protected set; }
+
+            public virtual bool get_is_dashing()
+            {
+                return false;
+            }
+
+            public virtual void start_dash_bounce(ref Vector2 hit_point)
+            {
+            }
+
+            public virtual void on_take_hit(sprite attacker)
+            {
+
+            }
+        }
+
         //make the player
-        public class player : sprite
+        public class player_side : player_pawn
         {
             //todo: refactor with m_vec.
 
-            public float max_dx = 1;//max x speed
-            public float max_dy = 4;//max y speed
             public float jump_speed = -2.5f;//jump veloclity
             public float acc = 1.0f;//0.15f;//acceleration
             public float dcc = 0.0f;//decceleration
@@ -1407,15 +1458,7 @@ namespace mbh_platformer
             int jump_count = 0;
             int max_jump_count = 2;
 
-            // Hack to solve cash where player hits 2 flying enemies in the same frame.
-            // First enemy starts playing dash bouncing, and second sees he isn't jumping
-            // and does damage.
-            // Note: I think a better, more general solution, would be to make player invul
-            //       for a short time after dash bouncing, or possibly even let them attack
-            //       during that time.
-            public bool dashing_last_frame { get; private set; }
-
-            public player() : base()
+            public player_side() : base()
             {
                 //animation definitions.
                 //use with set_anim()
@@ -1522,7 +1565,7 @@ namespace mbh_platformer
                 hp = 3;
             }
 
-            public void start_dash_bounce(ref Vector2 hit_point)
+            public override void start_dash_bounce(ref Vector2 hit_point)
             {
                 dy = -8;
                 dx = 5 * -Math.Sign(hit_point.X - cx);
@@ -1547,7 +1590,7 @@ namespace mbh_platformer
                 inst.hit_pause.start_pause(hit_pause_manager.pause_reason.bounce);
             }
 
-            public bool get_is_dashing()
+            public override bool get_is_dashing()
             {
                 return dash_time > 0;
             }
@@ -1895,7 +1938,7 @@ namespace mbh_platformer
                 base._update60();
             }
 
-            public void on_take_hit(sprite attacker)
+            public override void on_take_hit(sprite attacker)
             {
                 if (invul_time > 0)
                 {
@@ -1950,7 +1993,7 @@ namespace mbh_platformer
         public class cam : PicoXObj
         {
 
-            sprite tar;//target to follow.
+            player_controller tar;//target to follow.
             Vector2 pos;
 
             //how far from center of screen target must
@@ -1967,7 +2010,7 @@ namespace mbh_platformer
             int shake_remaining = 0;
             float shake_force = 0;
 
-            public cam(sprite target)
+            public cam(player_controller target)
             {
                 tar = target;
                 pos = new Vector2(target.x, target.y);
@@ -1982,26 +2025,26 @@ namespace mbh_platformer
 
                 //follow target outside of
                 //pull range.
-                if (pull_max_x() < self.tar.x)
+                if (pull_max_x() < self.tar.pawn.x)
                 {
 
-                    self.pos.X += min(self.tar.x - pull_max_x(), 4);
+                    self.pos.X += min(self.tar.pawn.x - pull_max_x(), 4);
 
                 }
-                if (pull_min_x() > self.tar.x)
+                if (pull_min_x() > self.tar.pawn.x)
                 {
-                    self.pos.X += min((self.tar.x - pull_min_x()), 4);
+                    self.pos.X += min((self.tar.pawn.x - pull_min_x()), 4);
                 }
 
 
-                if (pull_max_y() < self.tar.y)
+                if (pull_max_y() < self.tar.pawn.y)
                 {
-                    self.pos.Y += min(self.tar.y - pull_max_y(), 4);
+                    self.pos.Y += min(self.tar.pawn.y - pull_max_y(), 4);
 
                 }
-                if (pull_min_y() > self.tar.y)
+                if (pull_min_y() > self.tar.pawn.y)
                 {
-                    self.pos.Y += min((self.tar.y - pull_min_y()), 4);
+                    self.pos.Y += min((self.tar.pawn.y - pull_min_y()), 4);
 
                 }
 
@@ -2466,7 +2509,7 @@ namespace mbh_platformer
 
         }
 
-        player p;
+        player_controller p;
         cam game_cam;
 
         List<PicoXObj> objs;
@@ -2524,6 +2567,8 @@ namespace mbh_platformer
 
                         TmxMap TmxMapData = new TmxMap(GetMapString());
 
+                        player_pawn pawn = null;
+
                         foreach (var group in TmxMapData.ObjectGroups)
                         {
                             foreach (var o in group.Objects)
@@ -2531,6 +2576,37 @@ namespace mbh_platformer
                                 if (string.Compare(o.Type, "spawn_point", true) == 0)
                                 {
                                     spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
+
+                                    if (o.Properties.ContainsKey("type"))
+                                    {
+                                        string t = o.Properties["type"];
+
+                                        switch(t)
+                                        {
+                                            case "top":
+                                                {
+                                                    pawn = new player_top()
+                                                    {
+                                                        x = flr(spawn_point.X / 16.0f) * 16.0f + 8.0f,
+                                                        y = flr(spawn_point.Y / 16.0f) * 16.0f + 8.0f,
+                                                    };
+                                                    (pawn as player_top).dest_x = pawn.x;
+                                                    (pawn as player_top).dest_y = pawn.y;
+
+                                                    break;
+                                                }
+
+                                            case "side":
+                                                {
+                                                    pawn = new player_side()
+                                                    {
+                                                        x = spawn_point.X,
+                                                        y = spawn_point.Y,
+                                                    };
+                                                    break;
+                                                }
+                                        }
+                                    }
                                 }
                                 else if (string.Compare(o.Type, "cam_area", true) == 0)
                                 {
@@ -2550,7 +2626,7 @@ namespace mbh_platformer
                             }
                         }
 
-                        p = new player()
+                        p = new player_controller()
                         {
                             x = spawn_point.X,
                             y = spawn_point.Y,
@@ -2571,16 +2647,10 @@ namespace mbh_platformer
                         objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
                         objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
                         objs.Add(p);
-                        player_topdown pt = new player_topdown()
-                        {
-                            x = flr(spawn_point.X / 16.0f) * 16.0f + 8.0f,
-                            y = flr(spawn_point.Y / 16.0f) * 16.0f + 8.0f,
-                        };
-                        pt.dest_x = pt.x;
-                        pt.dest_y = pt.y;
 
-                        objs.Add(pt);
-                        game_cam = new cam(pt)
+                        p.pawn = pawn;
+                        
+                        game_cam = new cam(p)
                         {
                             pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
                             pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
