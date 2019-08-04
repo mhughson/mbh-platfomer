@@ -5,6 +5,7 @@ using PicoX;
 using System.Collections.Generic;
 using System;
 using TiledSharp;
+using System.IO;
 
 namespace mbh_platformer
 {
@@ -1242,24 +1243,64 @@ namespace mbh_platformer
                 anims = new Dictionary<string, anim>()
                 {
                     {
-                        "idle",
+                        "walk_down",
                         new anim()
                         {
                             loop = true,
-                            ticks=4,//how long is each frame shown.
+                            ticks=15,//how long is each frame shown.
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(224, 2, 2),
-                                create_anim_frame(226, 2, 2),
-                                create_anim_frame(228, 2, 2),
-                                create_anim_frame(226, 2, 2),
+                                create_anim_frame(448, 2, 2),
+                                create_anim_frame(480, 2, 2),
+                            }
+                        }
+                    },
+                    {
+                        "walk_left",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=15,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(450, 2, 2),
+                                create_anim_frame(482, 2, 2),
+                            }
+                        }
+                    },
+                    {
+                        "walk_up",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=15,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(452, 2, 2),
+                                create_anim_frame(484, 2, 2),
+                            }
+                        }
+                    },
+                    {
+                        "walk_right",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=15,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(454, 2, 2),
+                                create_anim_frame(486, 2, 2),
                             }
                         }
                     },
                 };
 
-                set_anim("idle");
+                set_anim("walk_down");
                 
                 w = 16;
                 h = 16;
@@ -1280,12 +1321,28 @@ namespace mbh_platformer
                     float delta = dest_x - x;
                     float dir = Math.Sign(delta);
                     x += dir * min(walk_speed, abs(delta));
+                    if (dir > 0)
+                    {
+                        set_anim("walk_right");
+                    }
+                    else
+                    {
+                        set_anim("walk_left");
+                    }
                 }
                 if (dest_y != y)
                 {
                     float delta = dest_y - y;
                     float dir = Math.Sign(delta);
                     y += dir * min(walk_speed, abs(delta));
+                    if (dir > 0)
+                    {
+                        set_anim("walk_down");
+                    }
+                    else
+                    {
+                        set_anim("walk_up");
+                    }
                 }
                 
 
@@ -2541,11 +2598,12 @@ namespace mbh_platformer
         game_state cur_game_state;
         uint time_in_state;
         complex_button start_game;
+        int cur_map_bank = 0;
 
         public hit_pause_manager hit_pause;
 
-        public string current_map = "Content/raw/test_map_2.tmx";
-        public string queued_map = "Content/raw/test_map_2.tmx";
+        public string current_map = "Content/raw/test_map_3.tmx";
+        public string queued_map = "Content/raw/test_map_3.tmx";
 
         public Game1() : base()
         {
@@ -2597,6 +2655,18 @@ namespace mbh_platformer
 
                         TmxMap TmxMapData = new TmxMap(GetMapString());
 
+                        // Figure out what bank this map uses.
+                        // NOTE: For now we assume that each map uses only 1 bank.
+                        for (int i = 0; i < GetSheetPath().Count; i++)
+                        {
+                            string file_name = Path.GetFileNameWithoutExtension((TmxMapData.Tilesets[0]).Image.Source);
+                            if (GetSheetPath()[i].EndsWith(file_name))
+                            {
+                                cur_map_bank = i;
+                                break;
+                            }
+                        }
+
                         player_pawn pawn = null;
 
                         foreach (var group in TmxMapData.ObjectGroups)
@@ -2614,8 +2684,8 @@ namespace mbh_platformer
                                             {
                                                 pawn = new player_top()
                                                 {
-                                                    x = flr(spawn_point.X / 16.0f) * 16.0f + 8.0f,
-                                                    y = flr(spawn_point.Y / 16.0f) * 16.0f + 8.0f,
+                                                    x = spawn_point.X,
+                                                    y = spawn_point.Y,
                                                     w = 16,
                                                     h = 16,
                                                     cw = 16,
@@ -2854,7 +2924,9 @@ namespace mbh_platformer
                         //pal(6, 5);
                         //pal(5, 6);
                         //pal(0, 7);
+                        bset(cur_map_bank);
                         map(0, 0, 0, 0, 16, 16);
+                        bset(0);
                         //map(0, 0, 0, 0, 16, 16, 0, 1); // easy mode?
                         //pal();
                         break;
@@ -2870,17 +2942,17 @@ namespace mbh_platformer
 
             Action draw_health = () =>
             {
-                if (p == null)
+                if (p == null || p.pawn == null)
                 {
                     return;
                 }
 
                 int y_pos = 1;
 
-                for (int i = 0; i < p.hp_max; i++)
+                for (int i = 0; i < p.pawn.hp_max; i++)
                 {
                     int id = 238;
-                    if (i < p.hp)
+                    if (i < p.pawn.hp)
                     {
                         id = 230;
                     }
@@ -2981,7 +3053,7 @@ namespace mbh_platformer
 
         public override List<string> GetSheetPath()
         {
-            return new List<string>() { "raw/platformer_sheet" };
+            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1"};
         }
 
         public override Dictionary<int, string> GetSoundEffectPaths()
