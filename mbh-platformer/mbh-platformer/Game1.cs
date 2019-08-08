@@ -2751,21 +2751,21 @@ namespace mbh_platformer
                             x = spawn_point.X,
                             y = spawn_point.Y,
                         };
-                        objs.Add(new rock() { x = 37 * 8, y = 97 * 8, });
-                        objs.Add(new rock() { x = 37 * 8, y = 89 * 8, });
-                        objs.Add(new rock() { x = 27 * 8, y = 107 * 8, });
-                        for (int i = 0; i < 10; i++)
-                        {
-                            objs.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
-                        }
-                        objs.Add(new badguy() { x = 19 * 8, y = 97 * 8 });
-                        objs.Add(new chopper() { x = 31 * 8, y = 85 * 8 });
-                        objs.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
-                        objs.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
-                        objs.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
-                        objs.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
-                        objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
-                        objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
+                        //objs.Add(new rock() { x = 37 * 8, y = 97 * 8, });
+                        //objs.Add(new rock() { x = 37 * 8, y = 89 * 8, });
+                        //objs.Add(new rock() { x = 27 * 8, y = 107 * 8, });
+                        //for (int i = 0; i < 10; i++)
+                        //{
+                        //    objs.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
+                        //}
+                        //objs.Add(new badguy() { x = 19 * 8, y = 97 * 8 });
+                        //objs.Add(new chopper() { x = 31 * 8, y = 85 * 8 });
+                        //objs.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
+                        //objs.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
+                        //objs.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
+                        //objs.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
+                        //objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
+                        //objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
                         objs.Add(p);
 
                         p.pawn = pawn;
