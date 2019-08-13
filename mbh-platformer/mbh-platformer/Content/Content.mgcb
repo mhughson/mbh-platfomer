@@ -13,6 +13,9 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin raw/abby.tmx
+/copy:raw/abby.tmx
+
 #begin raw/pico8_font.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -78,6 +81,9 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:raw/sheet_hello.png
+
+#begin raw/ship.tmx
+/copy:raw/ship.tmx
 
 #begin raw/test_map.tmx
 /copy:raw/test_map.tmx

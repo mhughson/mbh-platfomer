@@ -547,7 +547,7 @@ namespace mbh_platformer
 
             public int dead_time = -1;
 
-            public bool insta_death = false;
+            public bool touch_damage = false;
 
             bool cleared_attacker = false;
 
@@ -681,7 +681,7 @@ namespace mbh_platformer
                             }
                         }
 
-                        if (cleared_attacker && bounced && !insta_death && inst.intersects_obj_obj(inst.p.pawn, this))
+                        if (cleared_attacker && bounced && !touch_damage && inst.intersects_obj_obj(inst.p.pawn, this))
                         {
                             if (inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame)
                             {
@@ -709,7 +709,7 @@ namespace mbh_platformer
                         //}
                         //else
 
-                        //if (insta_death)
+                        //if (touch_damage)
                         //{
                         //    inst.p.pawn.on_take_hit(this);
                         //}
@@ -718,7 +718,7 @@ namespace mbh_platformer
                             //feet pos.
                             var player_bottom = inst.p.pawn.cy + (inst.p.pawn.ch * 0.5f);
 
-                            if ((inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame) && !insta_death)
+                            if ((inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame) && !touch_damage)
                             {
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.pawn.start_dash_bounce(ref pos);
@@ -734,7 +734,7 @@ namespace mbh_platformer
                             }
                             else if (cy > player_bottom)
                             {
-                                if (inst.p.pawn.dy >= 0 && !insta_death)
+                                if (inst.p.pawn.dy >= 0 && !touch_damage)
                                 {
                                     on_stomp();
                                 }
@@ -917,7 +917,7 @@ namespace mbh_platformer
 
                 dx = 0;
 
-                insta_death = true;
+                touch_damage = true;
 
                 event_on_anim_done += delegate (string anim_name)
                 {
@@ -931,12 +931,81 @@ namespace mbh_platformer
 
                 //if (curframe == 1)
                 //{
-                //    insta_death = true;
+                //    touch_damage = true;
                 //}
                 //else
                 //{
-                //    insta_death = false;
+                //    touch_damage = false;
                 //}
+            }
+        }
+
+        public class steam_spawner : sprite
+        {
+            int ticks = 0;
+
+            public steam_spawner()
+            {
+
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                ticks++;
+
+                if (ticks % 60 == 0)
+                {
+                    inst.objs.Add(new steam_splash() { x = x, y = y });
+                }
+            }
+        }
+
+        public class steam_splash : badguy
+        {
+            public steam_splash()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=10,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(368, 2, 2),
+                                create_anim_frame(371, 2, 2),
+                                create_anim_frame(374, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+                cw = 8;
+                ch = 8;
+                cy_offset = 4;
+
+                dx = 0;
+
+                touch_damage = true;
+                attack_power = 0.5f;
+
+                event_on_anim_done += delegate (string anim_name)
+                {
+                    inst.objs.Remove(this);
+                };
+            }
+
+            public override void _update60()
+            {
+                base._update60();
             }
         }
 
@@ -2165,7 +2234,7 @@ namespace mbh_platformer
 
             }
 
-            void shake(int ticks, float force)
+            public void shake(int ticks, float force)
             {
                 shake_remaining = ticks;
 
@@ -2307,7 +2376,7 @@ namespace mbh_platformer
                 if (v != null)
                 {
                     // Only player for now.
-                    if (self == p && v.is_platform)
+                    if (self == p.pawn && v.is_platform)
                     {
                         // Left objects.
 
@@ -2396,7 +2465,7 @@ namespace mbh_platformer
                     sprite v = o as sprite;
                     if (v != null)
                     {
-                        if (self == p && v.is_platform)
+                        if (self == p.pawn && v.is_platform)
                         {
                             // Check a 1 pixel high box along the bottom the the player.
                             // Adding 2 to the solid because that is what solids do in their update to stick to
@@ -2461,11 +2530,11 @@ namespace mbh_platformer
             if (!hit_roof)
             {
                 foreach (PicoXObj o in objs)
-                {
+                { 
                     sprite v = o as sprite;
                     if (v != null)
                     {
-                        if (self == p && v.is_platform)
+                        if (self == p.pawn && v.is_platform)
                         {
                             // Check a 1 pixel box along the bottom of the player.
                             // Using 0.5f because that seems more correct but im not totally sure.
@@ -2602,8 +2671,8 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map = "Content/raw/test_map_3.tmx";
-        public string queued_map = "Content/raw/test_map_3.tmx";
+        public string current_map = "Content/raw/test_map_2.tmx";
+        public string queued_map = "Content/raw/test_map_2.tmx";
 
         public Game1() : base()
         {
@@ -2717,6 +2786,16 @@ namespace mbh_platformer
                                 {
                                     objs.Add(
                                             new chopper()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
+                                else if (string.Compare(o.Type, "spawn_steam_spawner", true) == 0)
+                                {
+                                    objs.Add(
+                                            new steam_spawner()
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
@@ -2852,6 +2931,10 @@ namespace mbh_platformer
                         //if (time_in_state % 120 == 0)
                         //{
                         //    objs.Add(new lava_blast_spawner() { x = 29 * 8, y = 93 * 8 });
+                        //}
+                        //if (time_in_state % 120 == 0)
+                        //{
+                        //    game_cam.shake((int)rnd(30) + 30, 1);
                         //}
                         break;
                     }
@@ -2991,6 +3074,48 @@ namespace mbh_platformer
                             pal(5, 0, 1);
                             pal(0, 0, 1);
                         }
+                        /*
+                        int length = 4 * 60;
+                        int time_loop = (int)time_in_state % length;
+                        int fade_step = 5;
+
+                        if (time_loop < fade_step)
+                        {
+                            pal(5, 0, 1);
+                            pal(6, 0, 1);
+                            pal(7, 0, 1);
+                        }
+                        else if (time_loop < fade_step * 2)
+                        {
+                            pal(5, 0, 1);
+                            pal(6, 0, 1);
+                            pal(7, 5, 1);
+                        }
+                        else if (time_loop < fade_step * 3)
+                        {
+                            pal(5, 0, 1);
+                            pal(6, 5, 1);
+                            pal(7, 6, 1);
+                        }
+                        //else if (time_loop > length - fade_step)
+                        //{
+                        //    pal(5, 0, 1);
+                        //    pal(6, 0, 1);
+                        //    pal(7, 0, 1);
+                        //}
+                        else if (time_loop > length - fade_step * 1)
+                        {
+                            pal(5, 0, 1);
+                            pal(6, 0, 1);
+                            pal(7, 5, 1);
+                        }
+                        else if (time_loop > length - fade_step * 2)
+                        {
+                            pal(5, 0, 1);
+                            pal(6, 5, 1);
+                            pal(7, 6, 1);
+                        }
+                        */
                         break;
                     }
                 case game_state.gameplay_dead:
