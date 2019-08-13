@@ -152,8 +152,7 @@ namespace mbh_platformer
             public bool stay_on = false;
 
             public flying_def flying = null;
-
-            public float hp_max = 1;
+            public virtual int get_hp_max() { return 1; }
             public float hp = 1;
             public float attack_power = 1;
 
@@ -1528,6 +1527,21 @@ namespace mbh_platformer
             }
         }
 
+        [Flags]
+        public enum artifacts
+        {
+            none            = 0,
+
+            // Health pieces
+            health_00       = 1 << 0,
+
+            // Human tech
+            dash_pack       = 1 << 1,
+            jump_boots      = 1 << 2,
+
+            // Alien relics
+        }
+
         public class player_pawn : sprite
         {
             public bool platformed = false;
@@ -1541,6 +1555,20 @@ namespace mbh_platformer
             //       for a short time after dash bouncing, or possibly even let them attack
             //       during that time.
             public bool dashing_last_frame { get; protected set; }
+
+            public artifacts found_artifacts = artifacts.health_00 | artifacts.dash_pack | artifacts.jump_boots;
+
+            public override int get_hp_max()
+            {
+                int health = 1;
+
+                if ((found_artifacts & artifacts.health_00) != 0)
+                {
+                    health++;
+                }
+
+                return health;
+            }
 
             public virtual bool get_is_dashing()
             {
@@ -1578,10 +1606,8 @@ namespace mbh_platformer
             int max_jump_press = 12;//max time jump can be held
 
             bool jump_btn_released = true;//can we jump again?
-            public bool platformed = false;
 
             int jump_count = 0;
-            int max_jump_count = 2;
 
             public player_side() : base()
             {
@@ -1685,9 +1711,8 @@ namespace mbh_platformer
                 ch = 24;
                 //cx_offset = 8;
                 //cy_offset = 6;
-
-                hp_max = 3;
-                hp = 3;
+                
+                hp = get_hp_max();
             }
 
             public override void start_dash_bounce(ref Vector2 hit_point)
@@ -1776,7 +1801,7 @@ namespace mbh_platformer
                 var br = btn(1); //right
                 dash_button._update60();
 
-                if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0)
+                if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && (found_artifacts & artifacts.dash_pack) != 0)
                 {
                     dash_count = 1;
                     dash_time = 30;
@@ -1886,6 +1911,8 @@ namespace mbh_platformer
                         //allow for pressing right before
                         //hitting ground.
                         var new_jump_btn = self.jump_button.ticks_down < 10;
+
+                        int max_jump_count = ((found_artifacts & artifacts.jump_boots) != 0) ? 2 : 1;
                         //is player continuing a jump
                         //or starting a new one?
                         if (self.jump_hold_time > 0)
@@ -3032,7 +3059,7 @@ namespace mbh_platformer
 
                 int y_pos = 1;
 
-                for (int i = 0; i < p.pawn.hp_max; i++)
+                for (int i = 0; i < p.pawn.get_hp_max(); i++)
                 {
                     int id = 238;
                     if (i < p.pawn.hp)
