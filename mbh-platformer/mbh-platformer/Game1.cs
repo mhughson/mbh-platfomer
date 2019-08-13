@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System;
 using TiledSharp;
 using System.IO;
+using System.Linq;
 
 namespace mbh_platformer
 {
@@ -414,7 +415,7 @@ namespace mbh_platformer
 
                 event_on_anim_done += delegate (string anim_name)
                 {
-                    inst.objs.Remove(this);
+                    inst.objs_remove_queue.Add(this);
                 };
             }
 
@@ -668,25 +669,25 @@ namespace mbh_platformer
 
                     if (dead_time <= 0)
                     {
-                        inst.objs.Remove(this);
+                        inst.objs_remove_queue.Add(this);
                     }
                     else
                     {
                         if (!cleared_attacker)
                         {
-                            if (!inst.intersects_obj_obj(inst.p.pawn, this))
+                            if (!inst.intersects_obj_obj(inst.pc.pawn, this))
                             {
                                 cleared_attacker = true;
                             }
                         }
 
-                        if (cleared_attacker && bounced && !touch_damage && inst.intersects_obj_obj(inst.p.pawn, this))
+                        if (cleared_attacker && bounced && !touch_damage && inst.intersects_obj_obj(inst.pc.pawn, this))
                         {
-                            if (inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame)
+                            if (inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame)
                             {
-                                on_bounce(inst.p.pawn, true);
+                                on_bounce(inst.pc.pawn, true);
                                 Vector2 pos = new Vector2(x, y);
-                                inst.p.pawn.start_dash_bounce(ref pos);
+                                inst.pc.pawn.start_dash_bounce(ref pos);
                             }
                         }
                     }
@@ -699,7 +700,7 @@ namespace mbh_platformer
                 if (dead_time == -1 && inst.cur_game_state != game_state.gameplay_dead)
                 {
 
-                    if (inst.intersects_obj_obj(inst.p.pawn, this))
+                    if (inst.intersects_obj_obj(inst.pc.pawn, this))
                     {
                         // TODO
                         //if (inst.p.pawn.star_time > 0)
@@ -715,25 +716,25 @@ namespace mbh_platformer
                         //else
                         {
                             //feet pos.
-                            var player_bottom = inst.p.pawn.cy + (inst.p.pawn.ch * 0.5f);
+                            var player_bottom = inst.pc.pawn.cy + (inst.pc.pawn.ch * 0.5f);
 
-                            if ((inst.p.pawn.get_is_dashing() || inst.p.pawn.dashing_last_frame) && !touch_damage)
+                            if ((inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame) && !touch_damage)
                             {
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.pawn.start_dash_bounce(ref pos);
                                 //dx = inst.p.pawn.dx;
                                 //inst.p.pawn.dx *= -1;
-                                on_bounce(inst.p.pawn);
+                                on_bounce(inst.pc.pawn);
 
                                 if (flying != null)
                                 {
                                     Vector2 pos = new Vector2(x, y);
-                                    inst.p.pawn.start_dash_bounce(ref pos);
+                                    inst.pc.pawn.start_dash_bounce(ref pos);
                                 }
                             }
                             else if (cy > player_bottom)
                             {
-                                if (inst.p.pawn.dy >= 0 && !touch_damage)
+                                if (inst.pc.pawn.dy >= 0 && !touch_damage)
                                 {
                                     on_stomp();
                                 }
@@ -741,7 +742,7 @@ namespace mbh_platformer
                             else
                             {
                                 //self:on_attack(p1);
-                                inst.p.pawn.on_take_hit(this);
+                                inst.pc.pawn.on_take_hit(this);
                             }
                         }
                     }
@@ -788,7 +789,7 @@ namespace mbh_platformer
                 {
                     amount = -1.0f;
                 }
-                inst.p.pawn.dy = inst.p.pawn.max_dy * amount;
+                inst.pc.pawn.dy = inst.pc.pawn.max_dy * amount;
             }
         }
 
@@ -880,7 +881,7 @@ namespace mbh_platformer
                     dx = 0,
                     dy = -0.5f,
                 });
-                inst.objs.Remove(this);
+                inst.objs_remove_queue.Add(this);
             }
         }
 
@@ -920,7 +921,7 @@ namespace mbh_platformer
 
                 event_on_anim_done += delegate (string anim_name)
                 {
-                    inst.objs.Remove(this);
+                    inst.objs_remove_queue.Add(this);
                 };
             }
 
@@ -998,7 +999,7 @@ namespace mbh_platformer
 
                 event_on_anim_done += delegate (string anim_name)
                 {
-                    inst.objs.Remove(this);
+                    inst.objs_remove_queue.Add(this);
                 };
             }
 
@@ -1036,7 +1037,7 @@ namespace mbh_platformer
                     x += dir * speed;// * (rnd(8) + 8);
                     if (fget(mget(flr(x/8.0f), flr(y/8.0f)), 0) || !fget(mget(flr(x / 8.0f), flr(y / 8.0f) + 1), 0))
                     {
-                        inst.objs.Remove(this);
+                        inst.objs_remove_queue.Add(this);
                         return;
                     }
                     inst.objs.Add(new lava_splash() { x = x, y = y, flipx = dir < 0 ? true : false, /*, dx = rnd(1) * dir*/});
@@ -1193,7 +1194,7 @@ namespace mbh_platformer
                 hit_this_frame = false;
 
                 // TODO: Error - This assumes a collision means you are standing on top!
-                var touching_player = inst.intersects_box_box(inst.p.pawn.cx, inst.p.pawn.cy + inst.p.pawn.ch * 0.5f, inst.p.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                var touching_player = inst.intersects_box_box(inst.pc.pawn.cx, inst.pc.pawn.cy + inst.pc.pawn.ch * 0.5f, inst.pc.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
                 //var touching_player = inst.intersects_obj_obj(self, inst.p.pawn);
 
                 var old_x = self.x;
@@ -1210,8 +1211,8 @@ namespace mbh_platformer
                 if (touching_player)
                 {
                     hit_this_frame = true;
-                    inst.p.pawn.x += self.x - old_x;
-                    inst.p.pawn.y += self.y - old_y;
+                    inst.pc.pawn.x += self.x - old_x;
+                    inst.pc.pawn.y += self.y - old_y;
 
                     //inst.p.pawn.dx = self.x - old_x;
                     //inst.p.pawn.dy = self.y - old_y;
@@ -1220,7 +1221,7 @@ namespace mbh_platformer
                 }
                 else
                 {
-                    inst.p.pawn.platformed = false;
+                    inst.pc.pawn.platformed = false;
                 }
 
                 //if (tick >= 0.5f)
@@ -1252,7 +1253,7 @@ namespace mbh_platformer
                 hit_this_frame = false;
 
                 // TODO: Error - This assumes a collision means you are standing on top!
-                var touching_player = inst.intersects_box_box(inst.p.pawn.cx, inst.p.pawn.cy + inst.p.pawn.ch * 0.5f, inst.p.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                var touching_player = inst.intersects_box_box(inst.pc.pawn.cx, inst.pc.pawn.cy + inst.pc.pawn.ch * 0.5f, inst.pc.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
                 //var touching_player = inst.intersects_obj_obj(self, inst.p.pawn);
 
                 var old_x = self.x;
@@ -1269,8 +1270,8 @@ namespace mbh_platformer
                 if (touching_player)
                 {
                     hit_this_frame = true;
-                    inst.p.pawn.x += self.x - old_x;
-                    inst.p.pawn.y += self.y - old_y;
+                    inst.pc.pawn.x += self.x - old_x;
+                    inst.pc.pawn.y += self.y - old_y;
 
                     //inst.p.pawn.dx = self.x - old_x;
                     //inst.p.pawn.dy = self.y - old_y;
@@ -1279,13 +1280,13 @@ namespace mbh_platformer
                 }
                 else
                 {
-                    inst.p.pawn.platformed = false;
+                    inst.pc.pawn.platformed = false;
                 }
 
                 if (tick >= 0.5f)
                 {
                     inst.change_meta_tile(flr(x/8), flr(y/8), new int[] { 868, 869, 884, 885 });
-                    inst.objs.Remove(this);
+                    inst.objs_remove_queue.Add(this);
                 }
 
                 // Should be handled by collide side.
@@ -1505,7 +1506,9 @@ namespace mbh_platformer
 
         public class player_controller : sprite
         {
-            public player_pawn pawn;
+            public player_pawn pawn { get; protected set; }
+            
+            public artifacts found_artifacts = artifacts.none;// artifacts.health_00 | artifacts.dash_pack | artifacts.jump_boots;
 
             public player_controller()
             {
@@ -1524,6 +1527,12 @@ namespace mbh_platformer
                 base._draw();
 
                 pawn._draw();
+            }
+            
+            public virtual void possess(player_pawn p)
+            {
+                pawn = p;
+                p.set_controller(this);
             }
         }
 
@@ -1544,6 +1553,8 @@ namespace mbh_platformer
 
         public class player_pawn : sprite
         {
+            protected player_controller controller;
+
             public bool platformed = false;
             public float max_dx = 1;//max x speed
             public float max_dy = 4;//max y speed
@@ -1556,13 +1567,11 @@ namespace mbh_platformer
             //       during that time.
             public bool dashing_last_frame { get; protected set; }
 
-            public artifacts found_artifacts = artifacts.health_00 | artifacts.dash_pack | artifacts.jump_boots;
-
             public override int get_hp_max()
             {
                 int health = 1;
 
-                if ((found_artifacts & artifacts.health_00) != 0)
+                if ((controller.found_artifacts & artifacts.health_00) != 0)
                 {
                     health++;
                 }
@@ -1582,6 +1591,14 @@ namespace mbh_platformer
             public virtual void on_take_hit(sprite attacker)
             {
 
+            }
+
+            // Should only be called by PC, so that relationship is maintained.
+            public virtual void set_controller(player_controller c)
+            {
+                controller = c;
+                
+                hp = get_hp_max();
             }
         }
 
@@ -1711,8 +1728,6 @@ namespace mbh_platformer
                 ch = 24;
                 //cx_offset = 8;
                 //cy_offset = 6;
-                
-                hp = get_hp_max();
             }
 
             public override void start_dash_bounce(ref Vector2 hit_point)
@@ -1801,7 +1816,7 @@ namespace mbh_platformer
                 var br = btn(1); //right
                 dash_button._update60();
 
-                if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && (found_artifacts & artifacts.dash_pack) != 0)
+                if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && (controller.found_artifacts & artifacts.dash_pack) != 0)
                 {
                     dash_count = 1;
                     dash_time = 30;
@@ -1912,7 +1927,7 @@ namespace mbh_platformer
                         //hitting ground.
                         var new_jump_btn = self.jump_button.ticks_down < 10;
 
-                        int max_jump_count = ((found_artifacts & artifacts.jump_boots) != 0) ? 2 : 1;
+                        int max_jump_count = ((controller.found_artifacts & artifacts.jump_boots) != 0) ? 2 : 1;
                         //is player continuing a jump
                         //or starting a new one?
                         if (self.jump_hold_time > 0)
@@ -2165,7 +2180,11 @@ namespace mbh_platformer
             public cam(player_controller target)
             {
                 tar = target;
-                pos = new Vector2(target.x, target.y);
+                jump_to_target();
+            }
+            public void jump_to_target()
+            {
+                pos = new Vector2(tar.pawn.x, tar.pawn.y);
             }
             public override void _update60()
             {
@@ -2403,7 +2422,7 @@ namespace mbh_platformer
                 if (v != null)
                 {
                     // Only player for now.
-                    if (self == p.pawn && v.is_platform)
+                    if (self == pc.pawn && v.is_platform)
                     {
                         // Left objects.
 
@@ -2492,7 +2511,7 @@ namespace mbh_platformer
                     sprite v = o as sprite;
                     if (v != null)
                     {
-                        if (self == p.pawn && v.is_platform)
+                        if (self == pc.pawn && v.is_platform)
                         {
                             // Check a 1 pixel high box along the bottom the the player.
                             // Adding 2 to the solid because that is what solids do in their update to stick to
@@ -2561,7 +2580,7 @@ namespace mbh_platformer
                     sprite v = o as sprite;
                     if (v != null)
                     {
-                        if (self == p.pawn && v.is_platform)
+                        if (self == pc.pawn && v.is_platform)
                         {
                             // Check a 1 pixel box along the bottom of the player.
                             // Using 0.5f because that seems more correct but im not totally sure.
@@ -2647,7 +2666,7 @@ namespace mbh_platformer
                 if (time_remaining <= 0)
                 {
                     inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851});
-                    inst.objs.Remove(this);
+                    inst.objs_remove_queue.Add(this);
                 }
             }
         }
@@ -2664,7 +2683,7 @@ namespace mbh_platformer
             {
                 base._update60();
 
-                if (inst.intersects_obj_obj(this, inst.p.pawn))
+                if (inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
                     inst.queued_map = dest_map_path;
                 }
@@ -2677,6 +2696,58 @@ namespace mbh_platformer
             }
         }
 
+        public class artifact_pickup : sprite
+        {
+            artifacts id;
+
+            public artifact_pickup(artifacts id)
+            {
+                this.id = id;
+
+                switch(id)
+                {
+                    case artifacts.dash_pack:
+                        {
+                            anims = new Dictionary<string, anim>()
+                            {
+                                {
+                                    "default",
+                                    new anim()
+                                    {
+                                        ticks=30,//how long is each frame shown.
+                                        frames = new int[][]
+                                        {
+                                            create_anim_frame(268, 2, 2),
+                                            create_anim_frame(270, 2, 2),
+                                        }
+                                    }
+                                },
+                            };
+                            break;
+                        }
+                }
+                
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+                cw = 16;
+                ch = 16;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.intersects_obj_obj(inst.pc.pawn, this))
+                {
+                    inst.pc.found_artifacts |= id;
+                    inst.objs_remove_queue.Add(this);
+                    return;
+                }
+            }
+        }
+
         public enum game_state
         {
             main_menu,
@@ -2686,10 +2757,11 @@ namespace mbh_platformer
 
         }
 
-        player_controller p;
+        player_controller pc;
         cam game_cam;
 
         List<PicoXObj> objs;
+        List<PicoXObj> objs_remove_queue;
 
         game_state cur_game_state;
         uint time_in_state;
@@ -2727,6 +2799,7 @@ namespace mbh_platformer
                         if (new_state == game_state.game_over)
                         {
                             objs.Clear();
+                            objs_remove_queue.Clear();
                         }
                         break;
                     }
@@ -2743,6 +2816,8 @@ namespace mbh_platformer
                         current_map = queued_map;
 
                         objs.Clear();
+                        objs_remove_queue.Clear();
+
                         reloadmap(GetMapString());
 
                         Vector2 spawn_point = Vector2.Zero;
@@ -2849,14 +2924,22 @@ namespace mbh_platformer
 
                                     objs.Add(ml);
                                 }
+                                else if (string.Compare(o.Type, "artifact", true) == 0)
+                                {
+                                    artifacts t = (artifacts)Enum.Parse(typeof(artifacts), o.Properties["id"]);
+
+                                    artifact_pickup ap = new artifact_pickup(t)
+                                    {
+                                        x = (float)o.X + ((float)o.Width * 0.5f),
+                                        y = (float)o.Y + ((float)o.Height * 0.5f),
+                                    };
+
+                                    objs.Add(ap);
+                                }
                             }
                         }
 
-                        p = new player_controller()
-                        {
-                            x = spawn_point.X,
-                            y = spawn_point.Y,
-                        };
+
                         //objs.Add(new rock() { x = 37 * 8, y = 97 * 8, });
                         //objs.Add(new rock() { x = 37 * 8, y = 89 * 8, });
                         //objs.Add(new rock() { x = 27 * 8, y = 107 * 8, });
@@ -2872,15 +2955,16 @@ namespace mbh_platformer
                         //objs.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
                         //objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
                         //objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
-                        objs.Add(p);
+                        objs.Add(pc);
 
-                        p.pawn = pawn;
+                        pc.possess(pawn);
                         
-                        game_cam = new cam(p)
+                        game_cam = new cam(pc)
                         {
                             pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
                             pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
                         };
+                        game_cam.jump_to_target();
 
                         foreach(PicoXObj o in objs)
                         {
@@ -2931,6 +3015,9 @@ namespace mbh_platformer
         public override void _init()
         {
             objs = new List<PicoXObj>();
+            objs_remove_queue = new List<PicoXObj>();
+            // one player controller for the life of the game.
+            pc = new player_controller();
             start_game = new complex_button(4);
             hit_pause = new hit_pause_manager();
             cur_game_state = game_state.main_menu;
@@ -2982,6 +3069,7 @@ namespace mbh_platformer
                         break;
                     }
             }
+            // TODO: Should we ignore objects in the remove queue?
             for (int i = 0; i < objs.Count; i++)
             {
                 objs[i]._preupdate();
@@ -2994,6 +3082,11 @@ namespace mbh_platformer
             {
                 objs[i]._postupdate();
             }
+
+            // Remove all the objects which requested to be removed.
+            objs = objs.Except(objs_remove_queue).ToList();
+            objs_remove_queue.Clear();
+
             if (game_cam != null)
             {
                 game_cam._update60();
@@ -3052,17 +3145,17 @@ namespace mbh_platformer
 
             Action draw_health = () =>
             {
-                if (p == null || p.pawn == null)
+                if (pc == null || pc.pawn == null)
                 {
                     return;
                 }
 
                 int y_pos = 1;
 
-                for (int i = 0; i < p.pawn.get_hp_max(); i++)
+                for (int i = 0; i < pc.pawn.get_hp_max(); i++)
                 {
                     int id = 238;
-                    if (i < p.pawn.hp)
+                    if (i < pc.pawn.hp)
                     {
                         id = 230;
                     }
