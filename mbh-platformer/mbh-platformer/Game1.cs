@@ -363,12 +363,12 @@ namespace mbh_platformer
                 }
 
                 //if (inst.time_in_state % 2 == 0)
-                {
-                    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
-                    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
-                }
-                pset(x, y, 8);
-                pset(cx, cy, 9);
+                //{
+                //    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
+                //    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
+                //}
+                //pset(x, y, 8);
+                //pset(cx, cy, 9);
 
                 // bottom
                 //var offset_x = self.cw / 3.0f;
@@ -1543,10 +1543,15 @@ namespace mbh_platformer
 
             // Health pieces
             health_00       = 1 << 0,
+            health_01       = 1 << 1,
+            health_02       = 1 << 2,
+            health_03       = 1 << 3,
+            health_start    = health_00,
+            health_end      = health_03,
 
             // Human tech
-            dash_pack       = 1 << 1,
-            jump_boots      = 1 << 2,
+            dash_pack       = 1 << 4,
+            jump_boots      = 1 << 5,
 
             // Alien relics
         }
@@ -1571,11 +1576,13 @@ namespace mbh_platformer
             {
                 int health = 1;
 
-                if ((controller.found_artifacts & artifacts.health_00) != 0)
+                for (int i = (int)artifacts.health_start; i <= (int)artifacts.health_end; i = i << 1)
                 {
-                    health++;
+                    if ((controller.found_artifacts & (artifacts)i) != 0)
+                    {
+                        health++;
+                    }
                 }
-
                 return health;
             }
 
@@ -1598,6 +1605,7 @@ namespace mbh_platformer
             {
                 controller = c;
                 
+                // TODO: Health should transfer as we change levels.
                 hp = get_hp_max();
             }
         }
@@ -2611,12 +2619,14 @@ namespace mbh_platformer
             {
                 bounce,
                 death,
+                artifact_picked_up,
             }
 
             Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
             {
                 { pause_reason.bounce, 0 }, // no pause for now. happens too much.
-                { pause_reason.death, 30 }
+                { pause_reason.death, 30 },
+                { pause_reason.artifact_picked_up, 30 },
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -2704,9 +2714,10 @@ namespace mbh_platformer
             {
                 this.id = id;
 
-                switch(id)
-                {
-                    case artifacts.dash_pack:
+                //switch(id)
+                //{
+                //    case artifacts.dash_pack:
+                //    case artifacts.health_00:
                         {
                             anims = new Dictionary<string, anim>()
                             {
@@ -2723,9 +2734,9 @@ namespace mbh_platformer
                                     }
                                 },
                             };
-                            break;
+                            //break;
                         }
-                }
+                //}
                 
                 set_anim("default");
 
@@ -2742,7 +2753,12 @@ namespace mbh_platformer
                 if (inst.intersects_obj_obj(inst.pc.pawn, this))
                 {
                     inst.pc.found_artifacts |= id;
+                    if (id >= artifacts.health_start && id <= artifacts.health_end)
+                    {
+                        inst.pc.pawn.hp = inst.pc.pawn.get_hp_max();
+                    }
                     inst.objs_remove_queue.Add(this);
+                    inst.hit_pause.start_pause(hit_pause_manager.pause_reason.artifact_picked_up);
                     return;
                 }
             }
@@ -2928,13 +2944,17 @@ namespace mbh_platformer
                                 {
                                     artifacts t = (artifacts)Enum.Parse(typeof(artifacts), o.Properties["id"]);
 
-                                    artifact_pickup ap = new artifact_pickup(t)
+                                    // Has the player already found this?
+                                    if ((pc.found_artifacts & t) == 0)
                                     {
-                                        x = (float)o.X + ((float)o.Width * 0.5f),
-                                        y = (float)o.Y + ((float)o.Height * 0.5f),
-                                    };
+                                        artifact_pickup ap = new artifact_pickup(t)
+                                        {
+                                            x = (float)o.X + ((float)o.Width * 0.5f),
+                                            y = (float)o.Y + ((float)o.Height * 0.5f),
+                                        };
 
-                                    objs.Add(ap);
+                                        objs.Add(ap);
+                                    }
                                 }
                             }
                         }
