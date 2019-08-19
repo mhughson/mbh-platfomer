@@ -606,6 +606,8 @@ namespace mbh_platformer
 
             bool cleared_attacker = false;
 
+            protected bool has_rock_armor = false;
+
             public badguy()
             {
                 anims = new Dictionary<string, anim>()
@@ -775,16 +777,21 @@ namespace mbh_platformer
 
                             if ((inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame) && !touch_damage)
                             {
+                                bool rock_smashable = (inst.pc.found_artifacts & artifacts.rock_smasher) != 0 || !has_rock_armor;
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.pawn.start_dash_bounce(ref pos);
                                 //dx = inst.p.pawn.dx;
                                 //inst.p.pawn.dx *= -1;
-                                on_bounce(inst.pc.pawn);
+                                if (rock_smashable)
+                                {
+                                    on_bounce(inst.pc.pawn);
+                                }
 
-                                if (flying != null)
+                                if (flying != null || !rock_smashable)
                                 {
                                     Vector2 pos = new Vector2(x, y);
                                     inst.pc.pawn.start_dash_bounce(ref pos);
+                                    inst.pc.pawn.x += 4;
                                 }
                             }
                             else if (cy > player_bottom)
@@ -1168,6 +1175,8 @@ namespace mbh_platformer
                 dx = 0;
 
                 flipx = dir < 0;
+
+                has_rock_armor = true;
 
                 event_on_anim_done += delegate (string anim_name)
                 {
@@ -2988,6 +2997,16 @@ namespace mbh_platformer
                                 {
                                     objs_add_queue.Add(
                                             new chopper()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
+                                else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
+                                {
+                                    objs_add_queue.Add(
+                                            new lava_blaster(Int32.Parse(o.Properties["dir"]))
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
