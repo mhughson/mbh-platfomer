@@ -1607,6 +1607,7 @@ namespace mbh_platformer
             // Human tech
             dash_pack       = 1 << 4,
             jump_boots      = 1 << 5,
+            rock_smasher    = 1 << 6,
 
             // Alien relics
         }
@@ -1814,7 +1815,7 @@ namespace mbh_platformer
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
                     inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
-                if (fget(mget(mx, my), 5))
+                if (fget(mget(mx, my), 5) && (controller.found_artifacts & artifacts.rock_smasher) != 0)
                 {
                     var grid_pos = inst.map_pos_to_meta_tile(mx, my);
 
@@ -1830,7 +1831,7 @@ namespace mbh_platformer
                                     x = final_x,
                                     y = final_y,
                                 });
-                         }
+                        }
                     }
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                 }
