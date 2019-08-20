@@ -430,6 +430,61 @@ namespace mbh_platformer
             }
         }
 
+        public class simple_fx_particle : simple_fx
+        {
+            public simple_fx_particle(float dir_x, float dir_y, int sprite_id)
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(sprite_id, 1, 1),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                x = 0;
+                y = 0;
+                w = 8;
+                h = 8;
+
+                dx = dir_x;
+                dy = dir_y;
+
+
+                event_on_anim_done = null;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                x += dx;
+                dy += 0.3f; // grav
+                y += dy;
+
+                if (inst.game_cam.is_obj_off_screen(this))
+                {
+                    inst.objs_remove_queue.Add(this);
+                }
+            }
+        }
+
         public class simple_fx_death_spark : simple_fx
         {
             float dir_x;
@@ -550,6 +605,8 @@ namespace mbh_platformer
             public bool touch_damage = false;
 
             bool cleared_attacker = false;
+
+            protected bool has_rock_armor = false;
 
             public badguy()
             {
@@ -720,16 +777,21 @@ namespace mbh_platformer
 
                             if ((inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame) && !touch_damage)
                             {
+                                bool rock_smashable = (inst.pc.found_artifacts & artifacts.rock_smasher) != 0 || !has_rock_armor;
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.pawn.start_dash_bounce(ref pos);
                                 //dx = inst.p.pawn.dx;
                                 //inst.p.pawn.dx *= -1;
-                                on_bounce(inst.pc.pawn);
+                                if (rock_smashable)
+                                {
+                                    on_bounce(inst.pc.pawn);
+                                }
 
-                                if (flying != null)
+                                if (flying != null || !rock_smashable)
                                 {
                                     Vector2 pos = new Vector2(x, y);
                                     inst.pc.pawn.start_dash_bounce(ref pos);
+                                    inst.pc.pawn.x += 4;
                                 }
                             }
                             else if (cy > player_bottom)
@@ -865,7 +927,7 @@ namespace mbh_platformer
             {
                 base.on_stomp();
 
-                inst.objs.Add(new chopper_body()
+                inst.objs_add_queue.Add(new chopper_body()
                 {
                     x = x,
                     y = y + 4,
@@ -873,7 +935,7 @@ namespace mbh_platformer
                     dx = 0,
                     dy = 0,
                 });
-                inst.objs.Add(new simple_fx_rotor()
+                inst.objs_add_queue.Add(new simple_fx_rotor()
                 {
                     x = x,
                     y = y - 8,
@@ -957,7 +1019,7 @@ namespace mbh_platformer
 
                 if (ticks % 60 == 0)
                 {
-                    inst.objs.Add(new steam_splash() { x = x, y = y });
+                    inst.objs_add_queue.Add(new steam_splash() { x = x, y = y });
                 }
             }
         }
@@ -1069,7 +1131,7 @@ namespace mbh_platformer
                         inst.objs_remove_queue.Add(this);
                         return;
                     }
-                    inst.objs.Add(new lava_splash() { x = x, y = y, flipx = dir < 0 ? true : false, /*, dx = rnd(1) * dir*/});
+                    inst.objs_add_queue.Add(new lava_splash() { x = x, y = y, flipx = dir < 0 ? true : false, /*, dx = rnd(1) * dir*/});
                 }
 
 
@@ -1143,6 +1205,8 @@ namespace mbh_platformer
 
                 flipx = dir < 0;
 
+                has_rock_armor = true;
+
                 event_on_anim_done += delegate (string anim_name)
                 {
                     if (dead_time > 0)
@@ -1151,7 +1215,7 @@ namespace mbh_platformer
                     }
                     if (anim_name == "open_mouth")
                     {
-                        inst.objs.Add(new lava_blast_spawner(flipx ? -1 : 1) { x = x, y = y + 4 });
+                        inst.objs_add_queue.Add(new lava_blast_spawner(flipx ? -1 : 1) { x = x, y = y + 4 });
                         set_anim("fire");
                     }
                     else if (anim_name == "fire")
@@ -1581,6 +1645,7 @@ namespace mbh_platformer
             // Human tech
             dash_pack       = 1 << 4,
             jump_boots      = 1 << 5,
+            rock_smasher    = 1 << 6,
 
             // Alien relics
         }
@@ -1775,20 +1840,40 @@ namespace mbh_platformer
                 dx = 5 * -Math.Sign(hit_point.X - cx);
                 dash_time = 0;
                 dash_count = 0;
-                inst.objs.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
+                inst.objs_add_queue.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
 
                 int mx = flr(hit_point.X / 8.0f);
                 int my = flr(hit_point.Y / 8.0f);
                 if (fget(mget(mx, my), 2))
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
-                    inst.objs.Add(new block_restorer(mx, my, 240));
+                    inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
                 }
                 if (fget(mget(mx, my), 3))
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
-                    inst.objs.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
+                    inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
+                }
+                if (fget(mget(mx, my), 5) && (controller.found_artifacts & artifacts.rock_smasher) != 0)
+                {
+                    var grid_pos = inst.map_pos_to_meta_tile(mx, my);
+
+                    for (int i = 0; i <= 1; i++)
+                    {
+                        for (int j = 0; j <= 1; j++)
+                        {
+                            var final_x = (grid_pos.X + i) * 8 + 4;
+                            var final_y = (grid_pos.Y + j) * 8 + 4;
+                            inst.objs_add_queue.Add(
+                                new simple_fx_particle(-1 + (i * 2), (1 - j + 1) * -3, mget(final_x / 8, final_y / 8))
+                                {
+                                    x = final_x,
+                                    y = final_y,
+                                });
+                        }
+                    }
+                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                 }
 
                 inst.hit_pause.start_pause(hit_pause_manager.pause_reason.bounce);
@@ -2010,7 +2095,7 @@ namespace mbh_platformer
                         else if (jump_count < max_jump_count && is_dashing && jump_button.is_pressed)
                         {
                             // Additional jumps get a little effect to show that it is special
-                            inst.objs.Add(new simple_fx() { x = x, y = y + h * 0.5f });
+                            inst.objs_add_queue.Add(new simple_fx() { x = x, y = y + h * 0.5f });
                             jump_hold_time += 1;
                             jump_count++;
                             dash_time = 0;
@@ -2200,7 +2285,7 @@ namespace mbh_platformer
                             x = x,
                             y = y,
                         };
-                        inst.objs.Add(o);
+                        inst.objs_add_queue.Add(o);
                     }
                 }
             }
@@ -2343,6 +2428,11 @@ namespace mbh_platformer
                 shake_remaining = ticks;
 
                 shake_force = force;
+            }
+
+            public bool is_obj_off_screen(sprite s)
+            {
+                return !inst.intersects_obj_box(s, pos.X, pos.Y, inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
             }
         }
 
@@ -2828,6 +2918,7 @@ namespace mbh_platformer
 
         List<PicoXObj> objs;
         List<PicoXObj> objs_remove_queue;
+        List<PicoXObj> objs_add_queue;
 
         game_state cur_game_state;
         uint time_in_state;
@@ -2866,6 +2957,7 @@ namespace mbh_platformer
                         {
                             objs.Clear();
                             objs_remove_queue.Clear();
+                            objs_add_queue.Clear();
                         }
                         break;
                     }
@@ -2883,6 +2975,7 @@ namespace mbh_platformer
 
                         objs.Clear();
                         objs_remove_queue.Clear();
+                        objs_add_queue.Clear();
 
                         reloadmap(GetMapString());
 
@@ -2952,8 +3045,18 @@ namespace mbh_platformer
                                 }
                                 else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
                                 {
-                                    objs.Add(
+                                    objs_add_queue.Add(
                                             new chopper()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
+                                else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
+                                {
+                                    objs_add_queue.Add(
+                                            new lava_blaster(Int32.Parse(o.Properties["dir"]))
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
@@ -2962,7 +3065,7 @@ namespace mbh_platformer
                                 }
                                 else if (string.Compare(o.Type, "spawn_steam_spawner", true) == 0)
                                 {
-                                    objs.Add(
+                                    objs_add_queue.Add(
                                             new steam_spawner()
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
@@ -2988,7 +3091,7 @@ namespace mbh_platformer
                                         ml.dest_map_path = dest_map_path;
                                     }
 
-                                    objs.Add(ml);
+                                    objs_add_queue.Add(ml);
                                 }
                                 else if (string.Compare(o.Type, "artifact", true) == 0)
                                 {
@@ -3003,29 +3106,29 @@ namespace mbh_platformer
                                             y = (float)o.Y + ((float)o.Height * 0.5f),
                                         };
 
-                                        objs.Add(ap);
+                                        objs_add_queue.Add(ap);
                                     }
                                 }
                             }
                         }
 
 
-                        //objs.Add(new rock() { x = 37 * 8, y = 97 * 8, });
-                        //objs.Add(new rock() { x = 37 * 8, y = 89 * 8, });
-                        //objs.Add(new rock() { x = 27 * 8, y = 107 * 8, });
+                        //objs_add_queue.Add(new rock() { x = 37 * 8, y = 97 * 8, });
+                        //objs_add_queue.Add(new rock() { x = 37 * 8, y = 89 * 8, });
+                        //objs_add_queue.Add(new rock() { x = 27 * 8, y = 107 * 8, });
                         //for (int i = 0; i < 10; i++)
                         //{
-                        //    objs.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
+                        //    objs_add_queue.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
                         //}
-                        //objs.Add(new badguy() { x = 19 * 8, y = 97 * 8 });
-                        //objs.Add(new chopper() { x = 31 * 8, y = 85 * 8 });
-                        //objs.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
-                        //objs.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
-                        //objs.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
-                        //objs.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
-                        //objs.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
-                        //objs.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
-                        objs.Add(pc);
+                        //objs_add_queue.Add(new badguy() { x = 19 * 8, y = 97 * 8 });
+                        //objs_add_queue.Add(new chopper() { x = 31 * 8, y = 85 * 8 });
+                        //objs_add_queue.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
+                        //objs_add_queue.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
+                        //objs_add_queue.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
+                        //objs_add_queue.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
+                        //objs_add_queue.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
+                        //objs_add_queue.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
+                        objs_add_queue.Add(pc);
 
                         pc.possess(pawn);
                         
@@ -3086,6 +3189,7 @@ namespace mbh_platformer
         {
             objs = new List<PicoXObj>();
             objs_remove_queue = new List<PicoXObj>();
+            objs_add_queue = new List<PicoXObj>();
             // one player controller for the life of the game.
             pc = new player_controller();
             start_game = new complex_button(4);
@@ -3114,7 +3218,7 @@ namespace mbh_platformer
                     {
                         //if (time_in_state % 120 == 0)
                         //{
-                        //    objs.Add(new lava_blast_spawner() { x = 29 * 8, y = 93 * 8 });
+                        //    objs_add_queue.Add(new lava_blast_spawner() { x = 29 * 8, y = 93 * 8 });
                         //}
                         //if (time_in_state % 120 == 0)
                         //{
@@ -3156,6 +3260,9 @@ namespace mbh_platformer
             // Remove all the objects which requested to be removed.
             objs = objs.Except(objs_remove_queue).ToList();
             objs_remove_queue.Clear();
+
+            objs.AddRange(objs_add_queue);
+            objs_add_queue.Clear();
 
             if (game_cam != null)
             {
