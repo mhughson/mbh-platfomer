@@ -1009,6 +1009,35 @@ namespace mbh_platformer
             }
         }
 
+        public class water_splash : simple_fx
+        {
+            public water_splash()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=10,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(368, 2, 2),
+                                create_anim_frame(371, 2, 2),
+                                create_anim_frame(374, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+            }
+        }
+
         public class lava_blast_spawner : sprite
         {
             int ticks;
@@ -1634,6 +1663,8 @@ namespace mbh_platformer
 
             int jump_count = 0;
 
+            bool in_water = false;
+
             public player_side() : base()
             {
                 //animation definitions.
@@ -1914,6 +1945,19 @@ namespace mbh_platformer
                 //jump buttons
                 self.jump_button._update60();
 
+                bool in_water_new = (fget(mget(flr(x / 8), flr(y / 8)), 4));
+
+                if (!in_water && in_water_new)
+                {
+                    inst.objs.Add(new water_splash()
+                    {
+                        x = x,
+                        y = flr(y/16) * 16.0f - 8.0f,
+                    });
+                }
+
+                in_water = in_water_new;
+
                 //jump is complex.
                 //we allow jump if:
                 //	on ground
@@ -1923,6 +1967,10 @@ namespace mbh_platformer
                 //not instant. it applies over
                 //multiple frames.
                 //if (!is_dashing)
+
+                int mod_max_jump_press = max_jump_press; // in_water ? max_jump_press * 6 : max_jump_press;
+                float mod_jump_speed = in_water ? jump_speed * 2.0f : jump_speed;
+
                 {
                     if (self.jump_button.is_down)
                     {
@@ -1943,9 +1991,9 @@ namespace mbh_platformer
                             self.jump_hold_time += 1;
                             //keep applying jump velocity
                             //until max jump time.
-                            if (self.jump_hold_time < self.max_jump_press)
+                            if (self.jump_hold_time < mod_max_jump_press)
                             {
-                                self.dy = self.jump_speed;//keep going up while held
+                                self.dy = mod_jump_speed;//keep going up while held
                             }
 
                             dash_time = 0;
@@ -1957,7 +2005,7 @@ namespace mbh_platformer
                             jump_count++;
                             dash_time = 0;
                             is_dashing = false;
-                            self.dy = self.jump_speed;
+                            self.dy = mod_jump_speed;
                         }
                         else if (jump_count < max_jump_count && is_dashing && jump_button.is_pressed)
                         {
@@ -1967,12 +2015,12 @@ namespace mbh_platformer
                             jump_count++;
                             dash_time = 0;
                             is_dashing = false;
-                            self.dy = self.jump_speed;
+                            self.dy = mod_jump_speed;
                         }
                     }
                     else
                     {
-                        if (jump_button.is_released && (self.jump_hold_time > 0 && self.jump_hold_time < self.max_jump_press))
+                        if (jump_button.is_released && (self.jump_hold_time > 0 && self.jump_hold_time < mod_max_jump_press))
                         {
                             self.dy = -1.0f;
                         }
@@ -1980,8 +2028,10 @@ namespace mbh_platformer
                         self.jump_hold_time = 0;
                     }
 
+                    float grav_mod = in_water ? 0.5f : 1.0f;
+
                     //move in y
-                    self.dy += self.grav;
+                    self.dy += self.grav * grav_mod;
                 }
 
                 self.dy = mid(-self.max_dy, self.dy, self.max_dy);
