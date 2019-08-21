@@ -2799,6 +2799,7 @@ namespace mbh_platformer
                 bounce,
                 death,
                 artifact_picked_up,
+                gem_picked_up,
             }
 
             Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
@@ -2806,6 +2807,7 @@ namespace mbh_platformer
                 { pause_reason.bounce, 0 }, // no pause for now. happens too much.
                 { pause_reason.death, 30 },
                 { pause_reason.artifact_picked_up, 30 },
+                { pause_reason.gem_picked_up, 0 },
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -2882,6 +2884,49 @@ namespace mbh_platformer
             {
                 // do nothing.
                 base._draw();
+            }
+        }
+
+        public class gem_pickup : sprite
+        {
+            public gem_pickup()
+            {
+                    anims = new Dictionary<string, anim>()
+                    {
+                        {
+                            "default",
+                            new anim()
+                            {
+                                ticks=15,//how long is each frame shown.
+                                frames = new int[][]
+                                {
+                                    create_anim_frame(292, 2, 2),
+                                    create_anim_frame(262, 2, 2),
+                                    create_anim_frame(264, 2, 2),
+                                    create_anim_frame(266, 2, 2),
+                                }
+                            }
+                        },
+                    };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+                cw = 16;
+                ch = 16;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.intersects_obj_obj(inst.pc.pawn, this))
+                {
+                    inst.objs_remove_queue.Add(this);
+                    inst.hit_pause.start_pause(hit_pause_manager.pause_reason.gem_picked_up);
+                    return;
+                }
             }
         }
 
@@ -3147,6 +3192,16 @@ namespace mbh_platformer
 
                                         objs_add_queue.Add(ap);
                                     }
+                                }
+                                else if (string.Compare(o.Type, "gem", true) == 0)
+                                {
+                                    gem_pickup gem = new gem_pickup()
+                                    {
+                                        x = (float)o.X + ((float)o.Width * 0.5f),
+                                        y = (float)o.Y + ((float)o.Height * 0.5f),
+                                    };
+
+                                    objs_add_queue.Add(gem);
                                 }
                             }
                         }
