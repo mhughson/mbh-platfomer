@@ -777,21 +777,50 @@ namespace mbh_platformer
 
                             if ((inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame) && !touch_damage)
                             {
-                                bool rock_smashable = (inst.pc.found_artifacts & artifacts.rock_smasher) != 0 || !has_rock_armor;
+                                bool rock_smashable = (inst.pc.found_artifacts & artifacts.rock_smasher) != 0 && has_rock_armor;
+                                bool had_rock_armor = has_rock_armor;
+
                                 //Vector2 pos = new Vector2(x, y);
                                 //inst.p.pawn.start_dash_bounce(ref pos);
                                 //dx = inst.p.pawn.dx;
                                 //inst.p.pawn.dx *= -1;
-                                if (rock_smashable)
+                                if (!has_rock_armor)
                                 {
                                     on_bounce(inst.pc.pawn);
                                 }
+                                else if (rock_smashable)
+                                {
+                                    int mx = flr(x / 8);
+                                    int my = flr(y / 8);
+                                    var grid_pos = inst.map_pos_to_meta_tile(mx, my);
 
-                                if (flying != null || !rock_smashable)
+                                    for (int i = 0; i <= 1; i++)
+                                    {
+                                        for (int j = 0; j <= 1; j++)
+                                        {
+                                            var final_x = (grid_pos.X + i) * 8 + 4;
+                                            var final_y = (grid_pos.Y + j) * 8 + 4;
+                                            inst.objs_add_queue.Add(
+                                                new simple_fx_particle(-1 + (i * 2), (1 - j + 1) * -3, (8 + i) + ((52 + j) * 16))
+                                                {
+                                                    x = final_x,
+                                                    y = final_y,
+                                                });
+                                        }
+                                    }
+
+                                    has_rock_armor = false;
+                                }
+
+                                if (flying != null || had_rock_armor)
                                 {
                                     Vector2 pos = new Vector2(x, y);
                                     inst.pc.pawn.start_dash_bounce(ref pos);
-                                    inst.pc.pawn.x += 4;
+
+                                    // Move the the edge of the bad guy to avoid hitting the next frame.
+                                    float delta_x = inst.pc.pawn.x - x;
+                                    inst.pc.pawn.x = x + Math.Sign(delta_x) * (cw * 0.5f + inst.pc.pawn.cw * 0.5f);
+
                                 }
                             }
                             else if (cy > player_bottom)
@@ -811,6 +840,16 @@ namespace mbh_platformer
                 }
                
                 base._update60();
+            }
+
+            public override void _draw()
+            {
+                base._draw();
+
+                if (has_rock_armor)
+                {
+                    spr(840, x - 8, y - 8, 2, 2);
+                }
             }
 
             protected virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
