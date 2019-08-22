@@ -3439,6 +3439,8 @@ namespace mbh_platformer
 
             draw_health();
 
+            int step = 1;
+
             switch (cur_game_state)
             {
                 case game_state.main_menu:
@@ -3511,6 +3513,7 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay_dead:
                     {
+                        step = flr((time_in_state / 240.0f) * 32.0f);
                         if (time_in_state < 120)
                         {
 
@@ -3544,6 +3547,24 @@ namespace mbh_platformer
                         print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
                         break;
                     }
+            }
+
+            step = (int)max(step, 1);
+
+            for (int x = 0; x < Res.X; x += step)
+            {
+                for (int y = 0; y < Res.Y; y += step)
+                {
+                    int color = pget(x, y);
+
+                    for (int i = 0; i < step; i++)
+                    {
+                        for (int j = 0; j < step; j++)
+                        {
+                            pset(x + i, y + j, color);
+                        }
+                    }
+                }
             }
 
 
