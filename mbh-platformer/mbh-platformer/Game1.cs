@@ -1642,9 +1642,17 @@ namespace mbh_platformer
             
             public artifacts found_artifacts = artifacts.none;// artifacts.health_00 | artifacts.dash_pack | artifacts.jump_boots;
 
+            // Iinitial implementation supports 8 levels with up to 4 gems on 
+            // each.
+            // TODO: Add ability to dynamically calculate how many gems are in game.
+            // TODO: Expand to support more levels.
+            // TODO: Possibly expand the support variable numbers of gems per level.
+            public UInt32 found_gems;
+
             public player_controller()
             {
-
+                found_gems = (uint)dget((uint)Game1.cartdata_index.gems);
+                found_artifacts = (artifacts)dget((uint)Game1.cartdata_index.artifacts);
             }
 
             public override void _update60()
@@ -1669,7 +1677,7 @@ namespace mbh_platformer
         }
 
         [Flags]
-        public enum artifacts
+        public enum artifacts : Int32
         {
             none            = 0,
 
@@ -1685,6 +1693,8 @@ namespace mbh_platformer
             dash_pack       = 1 << 4,
             jump_boots      = 1 << 5,
             rock_smasher    = 1 << 6,
+
+            MAX =  1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
 
             // Alien relics
         }
@@ -2889,7 +2899,10 @@ namespace mbh_platformer
 
         public class gem_pickup : sprite
         {
-            public gem_pickup()
+            // Index within the level is resides in.
+            public int id;
+
+            public gem_pickup(int id)
             {
                     anims = new Dictionary<string, anim>()
                     {
@@ -2915,6 +2928,8 @@ namespace mbh_platformer
                 h = 16;
                 cw = 16;
                 ch = 16;
+
+                this.id = id;
             }
 
             public override void _update60()
@@ -2923,10 +2938,23 @@ namespace mbh_platformer
 
                 if (inst.intersects_obj_obj(inst.pc.pawn, this))
                 {
+                    UInt32 gem_mask = (UInt32)1 << id + (inst.gems_per_level * inst.cur_level_id);
+
+                    inst.pc.found_gems |= gem_mask;
+
+                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
+
                     inst.objs_remove_queue.Add(this);
                     inst.hit_pause.start_pause(hit_pause_manager.pause_reason.gem_picked_up);
                     return;
                 }
+            }
+
+            public override void _draw()
+            {
+                base._draw();
+
+                //print(id.ToString(), x, y, 8);
             }
         }
 
@@ -2938,12 +2966,29 @@ namespace mbh_platformer
             {
                 this.id = id;
 
-                //switch(id)
-                //{
-                //    case artifacts.dash_pack:
-                //    case artifacts.health_00:
-                        {
-                            anims = new Dictionary<string, anim>()
+                if (id >= artifacts.health_start && id <= artifacts.health_end)
+                {
+                    anims = new Dictionary<string, anim>()
+                            {
+                                {
+                                    "default",
+                                    new anim()
+                                    {
+                                        ticks=10,//how long is each frame shown.
+                                        frames = new int[][]
+                                        {
+                                            create_anim_frame(300, 2, 2),
+                                            create_anim_frame(300, 2, 2),
+                                            create_anim_frame(300, 2, 2),
+                                            create_anim_frame(302, 2, 2),
+                                        }
+                                    }
+                                },
+                            };
+                }
+                else
+                {
+                    anims = new Dictionary<string, anim>()
                             {
                                 {
                                     "default",
@@ -2958,9 +3003,7 @@ namespace mbh_platformer
                                     }
                                 },
                             };
-                            //break;
-                        }
-                //}
+                }
                 
                 set_anim("default");
 
@@ -2977,6 +3020,9 @@ namespace mbh_platformer
                 if (inst.intersects_obj_obj(inst.pc.pawn, this))
                 {
                     inst.pc.found_artifacts |= id;
+
+                    dset((uint)Game1.cartdata_index.artifacts, (int)inst.pc.found_artifacts);
+
                     if (id >= artifacts.health_start && id <= artifacts.health_end)
                     {
                         inst.pc.pawn.hp = inst.pc.pawn.get_hp_max();
@@ -3011,8 +3057,19 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map = "Content/raw/test_map_2.tmx";
-        public string queued_map = "Content/raw/test_map_2.tmx";
+        public string current_map   = "Content/raw/test_map_2.tmx";
+        public string queued_map    = "Content/raw/test_map_2.tmx";
+
+        public int cur_level_id = 0;
+        public int gems_per_level = 4;
+
+        // save game index info.
+        public enum cartdata_index : uint
+        {
+            version = 0,
+            gems = 1,
+            artifacts = 2,
+        }
 
         public Game1() : base()
         {
@@ -3082,6 +3139,10 @@ namespace mbh_platformer
                         }
 
                         player_pawn pawn = null;
+
+                        int gem_id = 0;
+
+                        cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
 
                         foreach (var group in TmxMapData.ObjectGroups)
                         {
@@ -3195,13 +3256,27 @@ namespace mbh_platformer
                                 }
                                 else if (string.Compare(o.Type, "gem", true) == 0)
                                 {
-                                    gem_pickup gem = new gem_pickup()
-                                    {
-                                        x = (float)o.X + ((float)o.Width * 0.5f),
-                                        y = (float)o.Y + ((float)o.Height * 0.5f),
-                                    };
+                                    System.Diagnostics.Debug.Assert(cur_level_id >= 0);
+                                    System.Diagnostics.Debug.Assert(gem_id < gems_per_level);
 
-                                    objs_add_queue.Add(gem);
+                                    // Max of 4 gems per level.
+                                    if (gem_id < gems_per_level)
+                                    {
+                                        UInt32 gem_mask = (UInt32)1 << gem_id + (gems_per_level * cur_level_id);
+
+                                        if ((inst.pc.found_gems & gem_mask) == 0)
+                                        {
+                                            gem_pickup gem = new gem_pickup(gem_id)
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            };
+
+                                            objs_add_queue.Add(gem);
+                                        }
+
+                                        gem_id++;
+                                    }
                                 }
                             }
                         }
@@ -3281,6 +3356,32 @@ namespace mbh_platformer
 
         public override void _init()
         {
+            // Create save file.
+            cartdata("mbh-platformer");
+
+            // Zero's out all cartdata. Could do more complex logic if needed.
+            Action clear_save = delegate ()
+            {
+                for (uint i = 0; i < 64; i++)
+                {
+                    dset(i, 0);
+                }
+            };
+
+            // Add ability for user to clear save data.
+            menuitem(1, "clear save", clear_save);
+
+            int ver = dget((uint)cartdata_index.version);
+
+            // If this is an old version, clear it.
+            // Ideally this would not just clear the save but rather "upgrade it".
+            if (ver < 1)
+            {
+                clear_save();
+            }
+
+            dset((uint)cartdata_index.version, 1);
+
             objs = new List<PicoXObj>();
             objs_remove_queue = new List<PicoXObj>();
             objs_add_queue = new List<PicoXObj>();

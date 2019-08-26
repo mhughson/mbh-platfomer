@@ -1,0 +1,4 @@
+xcopy /s /y "C:\Users\Matt\Documents\Dev\Game\mono8\Mono8GL\bin\DesktopGL\AnyCPU\Release\Mono8GL.*" "C:\Users\Matt\Documents\Dev\Game\mbh-platformer\mbh-platformer\mbh-platformer\libs\Mono8GL.*"
+xcopy /s /y "C:\Users\Matt\Documents\Dev\Game\mono8\Mono8GL\bin\DesktopGL\AnyCPU\Release\Gif.Components.*" "C:\Users\Matt\Documents\Dev\Game\mbh-platformer\mbh-platformer\mbh-platformer\libs\Gif.Components.*"
+xcopy /s /y "C:\Users\Matt\Documents\Dev\Game\mono8\Mono8\bin\Release\Mono8.*" "C:\Users\Matt\Documents\Dev\Game\mbh-platformer\mbh-platformer\mbh-platformer\libs\Mono8.*"
+xcopy /s /y "C:\Users\Matt\Documents\Dev\Game\mono8\Mono8GL\bin\DesktopGL\AnyCPU\Release\PicoX.*" "C:\Users\Matt\Documents\Dev\Game\mbh-platformer\mbh-platformer\mbh-platformer\libs\PicoX.*"
