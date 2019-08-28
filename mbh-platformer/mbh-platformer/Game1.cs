@@ -2810,6 +2810,8 @@ namespace mbh_platformer
                 death,
                 artifact_picked_up,
                 gem_picked_up,
+
+                message_box_open,
             }
 
             Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
@@ -2818,6 +2820,7 @@ namespace mbh_platformer
                 { pause_reason.death, 30 },
                 { pause_reason.artifact_picked_up, 30 },
                 { pause_reason.gem_picked_up, 0 },
+                { pause_reason.message_box_open, 1 },
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -3029,6 +3032,37 @@ namespace mbh_platformer
                     }
                     inst.objs_remove_queue.Add(this);
                     inst.hit_pause.start_pause(hit_pause_manager.pause_reason.artifact_picked_up);
+
+                    string display_name = "";
+
+                    switch(id)
+                    {
+                        case artifacts.dash_pack:
+                            {
+                                display_name = "dash pack";
+                                break;
+                            }
+                        case artifacts.jump_boots:
+                            {
+                                display_name = "jump boots";
+                                break;
+                            }
+
+                        case artifacts.rock_smasher:
+                            {
+                                display_name = "rock smasher";
+                                break;
+                            }
+
+                        default:
+                            {
+                                display_name = "heart container";
+                                break;
+                            }
+                    }
+                    inst.message = new message_box();
+                    inst.message.set_message("the title", display_name + " acquired!");
+
                     return;
                 }
             }
@@ -3062,6 +3096,45 @@ namespace mbh_platformer
 
         public int cur_level_id = 0;
         public int gems_per_level = 4;
+
+        public class message_box
+        {
+            public int chars_per_line;
+
+            public string title { get; private set; }
+
+            public void set_message(string title, string body)
+            {
+                body_with_breaks = new List<string>();
+
+                chars_per_line = 32;
+
+                string[] words = body.Split(' ');
+                string line = "";
+
+                for (int i = 0; i < words.Length; i++)
+                {
+                    // TODO: if a single word is longer than the single line, then add hyphen and move to new line.
+                    if (words[i].Length + line.Length < chars_per_line)
+                    {
+                        line += words[i] + " ";
+                    }
+                    else
+                    {
+                        body_with_breaks.Add(line);
+                        line = words[i] + " ";
+                    }
+                }
+
+                // Add the last line.
+                // TODO: Handle case where the last word triggered an Add already.
+                body_with_breaks.Add(line);
+            }
+
+            public List<string> body_with_breaks { get; private set; }
+        };
+
+        public message_box message;
 
         // save game index info.
         public enum cartdata_index : uint
@@ -3438,6 +3511,19 @@ namespace mbh_platformer
                         break;
                     }
             }
+
+            if (message != null)
+            {
+                if (btnp(4) || btnp(5))
+                {
+                    message = null;
+                }
+                else
+                {
+                    hit_pause.start_pause(hit_pause_manager.pause_reason.message_box_open);
+                }
+            }
+
             // TODO: Should we ignore objects in the remove queue?
             for (int i = 0; i < objs.Count; i++)
             {
@@ -3668,6 +3754,27 @@ namespace mbh_platformer
                 }
             }
 
+            // message box
+            if (message != null)
+            {
+                float box_w = Res.X / 2.0f;
+                if (message.body_with_breaks.Count == 1)
+                {
+                    box_w = message.body_with_breaks[0].Length * 4;
+                }
+                float box_h = 6 * message.body_with_breaks.Count + 4;
+
+                float x = (Res.X / 2) - (box_w / 2);
+                float y = (Res.Y / 2) - (box_h / 2);
+
+                rectfill(x, y, x + box_w, y + box_h, 0);
+                rect(x + 1, y + 1, x + 1 + box_w - 2, y + 1 + box_h - 2, 7);
+
+                for (int i = 0; i < message.body_with_breaks.Count; i++)
+                {
+                    print(message.body_with_breaks[i], x + 3, (y + 3) + (i * 6), 7);
+                }
+            }
 
             string btnstr = "";
             for (int i = 0; i < 6; i++)
