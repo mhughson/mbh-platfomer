@@ -1513,6 +1513,11 @@ namespace mbh_platformer
             {
                 base._update60();
 
+                if (inst.hit_pause.is_paused() || (inst.cur_game_state == game_state.gameplay_dead))
+                {
+                    return;
+                }
+
                 // Calculate prior to moving so that if we reach the
                 // destination, we still remember what direction we
                 // we going.
@@ -3068,6 +3073,58 @@ namespace mbh_platformer
             }
         }
 
+        public class rocket_ship : sprite
+        {
+            bool hit = false;
+            public rocket_ship()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=15,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(296, 4, 4),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 32;
+                h = 32;
+                cw = 16;
+                ch = 16;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.intersects_obj_obj(this, inst.pc.pawn))
+                {
+                    if (hit == false)
+                    {
+
+                        // todo: count gems found.
+
+                        inst.message = new message_box();
+                        inst.message.set_message("title", "more goodies needed!");
+
+                    }
+                    hit = true;
+                }
+                else
+                {
+                    hit = false;
+                }
+            }
+        }
+
         public enum game_state
         {
             main_menu,
@@ -3091,8 +3148,8 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map   = "Content/raw/test_map_2.tmx";
-        public string queued_map    = "Content/raw/test_map_2.tmx";
+        public string current_map   = "Content/raw/test_map_3.tmx";
+        public string queued_map    = "Content/raw/test_map_3.tmx";
 
         public int cur_level_id = 0;
         public int gems_per_level = 4;
@@ -3285,6 +3342,16 @@ namespace mbh_platformer
                                 {
                                     objs_add_queue.Add(
                                             new steam_spawner()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
+                                else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
+                                {
+                                    objs_add_queue.Add(
+                                            new rocket_ship()
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
