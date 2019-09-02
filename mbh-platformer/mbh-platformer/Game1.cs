@@ -3461,26 +3461,6 @@ namespace mbh_platformer
                                             }
                                         );
                                 }
-                                else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new rocket_ship()
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "spawn_checkpoint", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new checkpoint()
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
                                 else if (string.Compare(o.Type, "map_link", true) == 0)
                                 {
                                     map_link ml = new map_link()
