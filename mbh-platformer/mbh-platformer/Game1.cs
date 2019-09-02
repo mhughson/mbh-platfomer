@@ -1676,8 +1676,20 @@ namespace mbh_platformer
             
             public virtual void possess(player_pawn p)
             {
-                pawn = p;
                 p.set_controller(this);
+
+                // Copy over important stuff between the pawns.
+                if (pawn != null)
+                {
+                    p.hp = pawn.hp;
+                }
+                else
+                {
+                    // if this is the first pawn, give them full health.
+                    p.hp = p.get_hp_max();
+                }
+
+                pawn = p;
             }
         }
 
@@ -1712,7 +1724,7 @@ namespace mbh_platformer
             public float max_dx = 1;//max x speed
             public float max_dy = 4;//max y speed
 
-            // Hack to solve cash where player hits 2 flying enemies in the same frame.
+            // Hack to solve case where player hits 2 flying enemies in the same frame.
             // First enemy starts playing dash bouncing, and second sees he isn't jumping
             // and does damage.
             // Note: I think a better, more general solution, would be to make player invul
@@ -1752,9 +1764,6 @@ namespace mbh_platformer
             public virtual void set_controller(player_controller c)
             {
                 controller = c;
-                
-                // TODO: Health should transfer as we change levels.
-                hp = get_hp_max();
             }
         }
 
