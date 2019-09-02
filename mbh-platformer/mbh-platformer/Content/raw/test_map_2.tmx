@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.6" orientation="orthogonal" renderorder="right-down" width="128" height="128" tilewidth="8" tileheight="8" infinite="0" nextobjectid="35">
+<map version="1.0" tiledversion="1.1.6" orientation="orthogonal" renderorder="right-down" width="128" height="128" tilewidth="8" tileheight="8" infinite="0" nextobjectid="37">
  <properties>
   <property name="level_id" type="int" value="1"/>
  </properties>
@@ -321,5 +321,7 @@
   <object id="27" name="gem" type="gem" x="336" y="144" width="16" height="16"/>
   <object id="28" name="gem" type="gem" x="368" y="144" width="16" height="16"/>
   <object id="34" name="gem" type="gem" x="400" y="128" width="16" height="16"/>
+  <object id="35" name="checkpoint" type="spawn_checkpoint" x="240" y="176" width="32" height="32"/>
+  <object id="36" name="checkpoint" type="spawn_checkpoint" x="304" y="144" width="32" height="32"/>
  </objectgroup>
 </map>

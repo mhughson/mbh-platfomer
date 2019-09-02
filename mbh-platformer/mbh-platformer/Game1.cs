@@ -3068,6 +3068,95 @@ namespace mbh_platformer
             }
         }
 
+        // TODO:
+        // * Trigger save when entering checkpoint.
+        // * Show as active when returning to the map with the last active checkpoint.
+        // * Save the last used checkpoint, and load into that map when resuming game.
+        public class checkpoint : sprite
+        {
+            // Is this the currently active checkpoint.
+            public bool is_activated { get; private set; }
+
+            // The name of the map where this checkpoint spawned.
+            public string map_name;
+
+            public checkpoint()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "off",
+                        new anim()
+                        {
+                            ticks=30,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(330, 4, 4),
+                            }
+                        }
+                    },
+                    {
+                        "on",
+                        new anim()
+                        {
+                            ticks=10,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(512, 4, 4),
+                                create_anim_frame(516, 4, 4),
+                                create_anim_frame(520, 4, 4),
+                            }
+                        }
+                    },
+                };
+
+                is_activated = false;
+
+                set_anim("off");
+
+                w = 32;
+                h = 32;
+                cw = 16;
+                ch = 16;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (!is_activated && inst.intersects_obj_obj(this, inst.pc.pawn))
+                {
+                    // Deactive the currently active one.
+                    if (inst.last_activated_checkpoint != null)
+                    {
+                        inst.last_activated_checkpoint.deactivate();
+                    }
+
+                    inst.last_activated_checkpoint = this;
+                    map_name = inst.current_map;
+                    is_activated = true;
+                    set_anim("on");
+
+                    // Check if any other checkpoints are active on the map, and
+                    // deactivate them.
+                    //foreach (PicoXObj o in inst.objs)
+                    //{
+                    //    checkpoint c = o as checkpoint;
+                    //    if (c != null && c != this)
+                    //    {
+                    //        c.deactivate();
+                    //    }
+                    //}
+                }
+            }
+
+            public void deactivate()
+            {
+                is_activated = false;
+                set_anim("off");
+            }
+        }
+
         public enum game_state
         {
             main_menu,
@@ -3096,6 +3185,8 @@ namespace mbh_platformer
 
         public int cur_level_id = 0;
         public int gems_per_level = 4;
+
+        public checkpoint last_activated_checkpoint;
 
         public class message_box
         {
@@ -3152,8 +3243,12 @@ namespace mbh_platformer
 
         public void set_game_state(game_state new_state)
         {
+            // Used in the case of entering gameplay, both from transitioning maps,
+            // and flow between states.
+            Vector2 spawn_point = Vector2.Zero;
+
             // Leaving...
-            switch(cur_game_state)
+            switch (cur_game_state)
             {
                 case game_state.main_menu:
                     {
@@ -3175,6 +3270,21 @@ namespace mbh_platformer
                         }
                         break;
                     }
+
+                case game_state.game_over:
+                    {
+                        if (new_state == game_state.gameplay)
+                        {
+                            if (last_activated_checkpoint != null)
+                            {
+                                current_map = last_activated_checkpoint.map_name;
+                                queued_map = current_map;
+                                spawn_point.X = last_activated_checkpoint.cx;
+                                spawn_point.Y = last_activated_checkpoint.cy;
+                            }
+                        }
+                        break;
+                    }
             }
 
             cur_game_state = new_state;
@@ -3187,15 +3297,14 @@ namespace mbh_platformer
                     {
                         current_map = queued_map;
 
+                        Vector2 cam_area_min = Vector2.Zero;
+                        Vector2 cam_area_max = Vector2.Zero;
+
                         objs.Clear();
                         objs_remove_queue.Clear();
                         objs_add_queue.Clear();
 
                         reloadmap(GetMapString());
-
-                        Vector2 spawn_point = Vector2.Zero;
-                        Vector2 cam_area_min = Vector2.Zero;
-                        Vector2 cam_area_max = Vector2.Zero;
 
                         TmxMap TmxMapData = new TmxMap(GetMapString());
 
@@ -3223,7 +3332,11 @@ namespace mbh_platformer
                             {
                                 if (string.Compare(o.Type, "spawn_point", true) == 0)
                                 {
-                                    spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
+                                    // Account for the case of a checkpoint.
+                                    if (spawn_point == Vector2.Zero)
+                                    {
+                                        spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
+                                    }
 
                                     // mandatory field.
                                     switch (o.Properties["type"])
@@ -3285,6 +3398,16 @@ namespace mbh_platformer
                                 {
                                     objs_add_queue.Add(
                                             new steam_spawner()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
+                                else if (string.Compare(o.Type, "spawn_checkpoint", true) == 0)
+                                {
+                                    objs_add_queue.Add(
+                                            new checkpoint()
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
@@ -3353,7 +3476,6 @@ namespace mbh_platformer
                                 }
                             }
                         }
-
 
                         //objs_add_queue.Add(new rock() { x = 37 * 8, y = 97 * 8, });
                         //objs_add_queue.Add(new rock() { x = 37 * 8, y = 89 * 8, });
