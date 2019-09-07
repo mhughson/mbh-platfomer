@@ -1656,6 +1656,11 @@ namespace mbh_platformer
 
             public player_controller()
             {
+                reload();
+            }
+
+            public void reload()
+            {
                 found_gems = (uint)dget((uint)Game1.cartdata_index.gems);
                 found_artifacts = (artifacts)dget((uint)Game1.cartdata_index.artifacts);
             }
@@ -2959,7 +2964,7 @@ namespace mbh_platformer
 
                     inst.pc.found_gems |= gem_mask;
 
-                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
+//                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
 
                     inst.objs_remove_queue.Add(this);
                     inst.hit_pause.start_pause(hit_pause_manager.pause_reason.gem_picked_up);
@@ -3038,7 +3043,7 @@ namespace mbh_platformer
                 {
                     inst.pc.found_artifacts |= id;
 
-                    dset((uint)Game1.cartdata_index.artifacts, (int)inst.pc.found_artifacts);
+                    //dset((uint)Game1.cartdata_index.artifacts, (int)inst.pc.found_artifacts);
 
                     if (id >= artifacts.health_start && id <= artifacts.health_end)
                     {
@@ -3146,6 +3151,8 @@ namespace mbh_platformer
             // The name of the map where this checkpoint spawned.
             public string map_name;
 
+            public bool touching;
+
             public checkpoint()
             {
                 anims = new Dictionary<string, anim>()
@@ -3184,35 +3191,51 @@ namespace mbh_platformer
                 h = 32;
                 cw = 16;
                 ch = 16;
+
+                touching = false;
             }
 
             public override void _update60()
             {
                 base._update60();
 
-                if (!is_activated && inst.intersects_obj_obj(this, inst.pc.pawn))
+                if (inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
-                    // Deactive the currently active one.
-                    if (inst.last_activated_checkpoint != null)
+                    if (!touching)
                     {
-                        inst.last_activated_checkpoint.deactivate();
+                        dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
+                        dset((uint)Game1.cartdata_index.artifacts, (int)inst.pc.found_artifacts);
+
+                        if (!is_activated)
+                        {
+                            // Deactive the currently active one.
+                            if (inst.last_activated_checkpoint != null)
+                            {
+                                inst.last_activated_checkpoint.deactivate();
+                            }
+
+                            inst.last_activated_checkpoint = this;
+                            map_name = inst.current_map;
+                            is_activated = true;
+                            set_anim("on");
+
+                            // Check if any other checkpoints are active on the map, and
+                            // deactivate them.
+                            //foreach (PicoXObj o in inst.objs)
+                            //{
+                            //    checkpoint c = o as checkpoint;
+                            //    if (c != null && c != this)
+                            //    {
+                            //        c.deactivate();
+                            //    }
+                            //}
+                        }
                     }
-
-                    inst.last_activated_checkpoint = this;
-                    map_name = inst.current_map;
-                    is_activated = true;
-                    set_anim("on");
-
-                    // Check if any other checkpoints are active on the map, and
-                    // deactivate them.
-                    //foreach (PicoXObj o in inst.objs)
-                    //{
-                    //    checkpoint c = o as checkpoint;
-                    //    if (c != null && c != this)
-                    //    {
-                    //        c.deactivate();
-                    //    }
-                    //}
+                    touching = true;
+                }
+                else
+                {
+                    touching = false;
                 }
             }
 
@@ -3361,6 +3384,8 @@ namespace mbh_platformer
             {
                 case game_state.gameplay:
                     {
+                        pc.reload();
+
                         current_map = queued_map;
 
                         Vector2 cam_area_min = Vector2.Zero;
