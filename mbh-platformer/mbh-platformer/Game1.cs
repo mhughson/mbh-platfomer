@@ -1684,13 +1684,14 @@ namespace mbh_platformer
                 p.set_controller(this);
 
                 // Copy over important stuff between the pawns.
-                if (pawn != null)
+                if (pawn != null && pawn.hp > 0)
                 {
                     p.hp = pawn.hp;
                 }
                 else
                 {
                     // if this is the first pawn, give them full health.
+                    // or if the current pawn is dead (we assume this means we are respawning).
                     p.hp = p.get_hp_max();
                 }
 
@@ -3125,9 +3126,17 @@ namespace mbh_platformer
                     {
 
                         // todo: count gems found.
-
-                        inst.message = new message_box();
-                        inst.message.set_message("title", "more goodies needed!");
+                        // temp hack. 1111 0000 is all found gems on level id 1 (pit with water).
+                        if (inst.pc.found_gems >= 0xf0)
+                        {
+                            inst.message = new message_box();
+                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); } );
+                        }
+                        else
+                        {
+                            inst.message = new message_box();
+                            inst.message.set_message("title", "more goodies needed!");
+                        }
 
                     }
                     hit = true;
@@ -3252,7 +3261,7 @@ namespace mbh_platformer
             gameplay,
             gameplay_dead,
             game_over,
-
+            game_win,
         }
 
         player_controller pc;
@@ -3283,7 +3292,9 @@ namespace mbh_platformer
 
             public string title { get; private set; }
 
-            public void set_message(string title, string body)
+            public Action on_close_delegate;
+
+            public void set_message(string title, string body, Action on_close = null)
             {
                 body_with_breaks = new List<string>();
 
@@ -3309,6 +3320,8 @@ namespace mbh_platformer
                 // Add the last line.
                 // TODO: Handle case where the last word triggered an Add already.
                 body_with_breaks.Add(line);
+
+                on_close_delegate = on_close;
             }
 
             public List<string> body_with_breaks { get; private set; }
@@ -3362,6 +3375,11 @@ namespace mbh_platformer
 
                 case game_state.game_over:
                     {
+                        // If we died we want to reload the PC to the previous state of the save game.
+                        // Don't want to do this in 'entering...' section because that will get hit when
+                        // moving between levels.
+                        pc.reload();
+
                         if (new_state == game_state.gameplay)
                         {
                             if (last_activated_checkpoint != null)
@@ -3382,10 +3400,15 @@ namespace mbh_platformer
             // Entering...
             switch (cur_game_state)
             {
+                case game_state.game_win:
+                    {
+                        objs.Clear();
+                        objs_remove_queue.Clear();
+                        objs_add_queue.Clear();
+                        break;
+                    }
                 case game_state.gameplay:
                     {
-                        pc.reload();
-
                         current_map = queued_map;
 
                         Vector2 cam_area_min = Vector2.Zero;
@@ -3739,6 +3762,7 @@ namespace mbh_platformer
             {
                 if (btnp(4) || btnp(5))
                 {
+                    message.on_close_delegate?.Invoke();
                     message = null;
                 }
                 else
@@ -3847,8 +3871,6 @@ namespace mbh_platformer
 
             camera(0, 0);
 
-            draw_health();
-
             int step = 1;
 
             switch (cur_game_state)
@@ -3863,6 +3885,8 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay:
                     {
+                        draw_health();
+
                         if (time_in_state < 15)
                         {
                             pal(7, 5, 1);
@@ -3923,6 +3947,8 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay_dead:
                     {
+                        draw_health();
+
                         step = flr((time_in_state / 240.0f) * 32.0f);
                         if (time_in_state < 120)
                         {
@@ -3954,6 +3980,12 @@ namespace mbh_platformer
                 case game_state.game_over:
                     {
                         var str = "game over";
+                        print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
+                        break;
+                    }
+                case game_state.game_win:
+                    {
+                        var str = "you win! the galaxy is at peace";
                         print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
                         break;
                     }
