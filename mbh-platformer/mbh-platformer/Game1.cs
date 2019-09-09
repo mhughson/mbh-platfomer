@@ -1096,7 +1096,7 @@ namespace mbh_platformer
                 dx = 0;
 
                 touch_damage = true;
-                attack_power = 0.5f;
+                attack_power = 0.25f;
 
                 event_on_anim_done += delegate (string anim_name)
                 {
@@ -3278,8 +3278,8 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map   = "Content/raw/test_map_3.tmx";
-        public string queued_map    = "Content/raw/test_map_3.tmx";
+        public string current_map   = "Content/raw/ship.tmx";
+        public string queued_map    = "Content/raw/ship.tmx";
 
         public int cur_level_id = 0;
         public int gems_per_level = 4;
@@ -3619,10 +3619,11 @@ namespace mbh_platformer
                         objs_add_queue.Add(pc);
 
                         pc.possess(pawn);
-                        
+
+                        const int hud_height = 16;
                         game_cam = new cam(pc)
                         {
-                            pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+                            pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
                             pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
                         };
                         game_cam.jump_to_target();
@@ -3859,12 +3860,36 @@ namespace mbh_platformer
 
                 for (int i = 0; i < pc.pawn.get_hp_max(); i++)
                 {
-                    int id = 238;
-                    if (i < pc.pawn.hp)
+                    int id = 238; // empty
+                    if (i < flr(pc.pawn.hp))
                     {
                         id = 230;
                     }
-                    spr(id, 1, y_pos, 2, 2);
+                    else
+                    {
+                        float remainder = pc.pawn.hp - flr(pc.pawn.hp);
+                        if (remainder > 0.75f)
+                        {
+                            id = 230; // full
+                        }
+                        else if (remainder > 0.5f)
+                        {
+                            id = 232; // 3/4
+                        }
+                        else if (remainder > 0.25f)
+                        {
+                            id = 234; // 2/4
+                        }
+                        else if (remainder > 0.0f)
+                        {
+                            id = 236; // 1/4
+                        }
+                        else
+                        {
+                            id = 238; // empty
+                        }
+                    }
+                    spr(id, y_pos, 1, 2, 2);
                     y_pos += 16;
                 }
             };
@@ -3885,6 +3910,7 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay:
                     {
+                        rectfill(0, 0, Res.X, 16, 7);
                         draw_health();
 
                         if (time_in_state < 15)
@@ -3947,6 +3973,7 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay_dead:
                     {
+                        rectfill(0, 0, Res.X, 16, 7);
                         draw_health();
 
                         step = flr((time_in_state / 240.0f) * 32.0f);

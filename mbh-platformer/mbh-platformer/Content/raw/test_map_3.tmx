@@ -521,8 +521,8 @@
 </data>
  </layer>
  <objectgroup name="Object Layer 1">
-  <object id="2" name="camera" type="cam_area" x="0" y="0" width="1024" height="1024"/>
-  <object id="3" name="default" type="spawn_point" x="400" y="384" width="16" height="16">
+  <object id="2" name="camera" type="cam_area" x="304" y="144" width="320" height="288"/>
+  <object id="3" name="default" type="spawn_point" x="352" y="176" width="16" height="16">
    <properties>
     <property name="type" value="top"/>
    </properties>
