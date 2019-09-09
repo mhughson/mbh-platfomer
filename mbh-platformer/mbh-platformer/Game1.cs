@@ -1687,6 +1687,10 @@ namespace mbh_platformer
                 if (pawn != null && pawn.hp > 0)
                 {
                     p.hp = pawn.hp;
+                    p.curanim = pawn.curanim;
+                    p.curframe = pawn.curframe;
+                    p.flipx = pawn.flipx;
+
                 }
                 else
                 {
@@ -2832,6 +2836,7 @@ namespace mbh_platformer
                 gem_picked_up,
 
                 message_box_open,
+                level_trans,
             }
 
             Dictionary<pause_reason, int> pause_times = new Dictionary<pause_reason, int>()
@@ -2841,6 +2846,7 @@ namespace mbh_platformer
                 { pause_reason.artifact_picked_up, 30 },
                 { pause_reason.gem_picked_up, 0 },
                 { pause_reason.message_box_open, 1 },
+                { pause_reason.level_trans, 1 },
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -3258,6 +3264,8 @@ namespace mbh_platformer
         public enum game_state
         {
             main_menu,
+            level_trans_exit,
+            level_trans_enter,
             gameplay,
             gameplay_dead,
             game_over,
@@ -3278,13 +3286,15 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map   = "Content/raw/ship.tmx";
-        public string queued_map    = "Content/raw/ship.tmx";
+        public string current_map   = "Content/raw/test_map_hall_left.tmx";
+        public string queued_map    = "Content/raw/test_map_hall_left.tmx";
 
         public int cur_level_id = 0;
         public int gems_per_level = 4;
 
         public checkpoint last_activated_checkpoint;
+
+        int level_trans_time = 30;
 
         public class message_box
         {
@@ -3352,16 +3362,6 @@ namespace mbh_platformer
             // Leaving...
             switch (cur_game_state)
             {
-                case game_state.main_menu:
-                    {
-                        // main_menu -> gameplay
-                        if (new_state == game_state.gameplay)
-                        {
-
-                        }
-                        break;
-                    }
-
                 case game_state.gameplay_dead:
                     {
                         if (new_state == game_state.game_over)
@@ -3380,7 +3380,7 @@ namespace mbh_platformer
                         // moving between levels.
                         pc.reload();
 
-                        if (new_state == game_state.gameplay)
+                        if (new_state == game_state.level_trans_enter)
                         {
                             if (last_activated_checkpoint != null)
                             {
@@ -3407,7 +3407,11 @@ namespace mbh_platformer
                         objs_add_queue.Clear();
                         break;
                     }
-                case game_state.gameplay:
+                case game_state.level_trans_exit:
+                    {
+                        break;
+                    }
+                case game_state.level_trans_enter:
                     {
                         current_map = queued_map;
 
@@ -3725,6 +3729,24 @@ namespace mbh_platformer
                     {
                         if (start_game.is_released)
                         {
+                            set_game_state(game_state.level_trans_enter);
+                        }
+                        break;
+                    }
+                case game_state.level_trans_exit:
+                    {
+                        hit_pause.start_pause(hit_pause_manager.pause_reason.level_trans);
+                        if (time_in_state >= level_trans_time)
+                        {
+                            set_game_state(game_state.level_trans_enter);
+                        }
+                        break;
+                    }
+                case game_state.level_trans_enter:
+                    {
+                        hit_pause.start_pause(hit_pause_manager.pause_reason.level_trans);
+                        if (time_in_state >= level_trans_time)
+                        {
                             set_game_state(game_state.gameplay);
                         }
                         break;
@@ -3753,7 +3775,7 @@ namespace mbh_platformer
                     {
                         if (start_game.is_released)
                         {
-                            set_game_state(game_state.gameplay);
+                            set_game_state(game_state.level_trans_enter);
                         }
                         break;
                     }
@@ -3802,9 +3824,9 @@ namespace mbh_platformer
                 hit_pause._update60();
             }
 
-            if (queued_map != GetMapString())
+            if (queued_map != GetMapString() && cur_game_state != game_state.level_trans_exit && cur_game_state != game_state.level_trans_enter)
             {
-                set_game_state(game_state.gameplay);
+                set_game_state(game_state.level_trans_exit);
             }
         }
 
@@ -3826,6 +3848,8 @@ namespace mbh_platformer
 
             switch (cur_game_state)
             {
+                case game_state.level_trans_exit:
+                case game_state.level_trans_enter:
                 case game_state.gameplay:
                 case game_state.gameplay_dead:
                     {
@@ -3913,20 +3937,20 @@ namespace mbh_platformer
                         rectfill(0, 0, Res.X, 16, 7);
                         draw_health();
 
-                        if (time_in_state < 15)
-                        {
-                            pal(7, 5, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
-                        else if (time_in_state < 30)
-                        {
-                            pal(7, 6, 1);
-                            pal(6, 5, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
+                        //if (time_in_state < 15)
+                        //{
+                        //    pal(7, 5, 1);
+                        //    pal(6, 0, 1);
+                        //    pal(5, 0, 1);
+                        //    pal(0, 0, 1);
+                        //}
+                        //else if (time_in_state < 30)
+                        //{
+                        //    pal(7, 6, 1);
+                        //    pal(6, 5, 1);
+                        //    pal(5, 0, 1);
+                        //    pal(0, 0, 1);
+                        //}
                         /*
                         int length = 4 * 60;
                         int time_loop = (int)time_in_state % length;
@@ -3969,6 +3993,66 @@ namespace mbh_platformer
                             pal(7, 6, 1);
                         }
                         */
+                        break;
+                    }
+                case game_state.level_trans_exit:
+                    {
+                        int fade_step_time = level_trans_time / 3;
+                        rectfill(0, 0, Res.X, 16, 7);
+                        draw_health();
+                        if (time_in_state < 0)
+                        {
+
+                        }
+                        else if (time_in_state < fade_step_time)
+                        {
+                            pal(7, 6, 1);
+                            pal(6, 5, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else if (time_in_state < fade_step_time * 2)
+                        {
+                            pal(7, 5, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else
+                        {
+                            pal(7, 0, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        break;
+                    }
+                case game_state.level_trans_enter:
+                    {
+                        int fade_step_time = level_trans_time / 3;
+                        rectfill(0, 0, Res.X, 16, 7);
+                        draw_health();
+                        if (time_in_state < fade_step_time)
+                        {
+                            pal(7, 0, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else if (time_in_state < fade_step_time * 2)
+                        {
+                            pal(7, 5, 1);
+                            pal(6, 0, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
+                        else
+                        {
+                            pal(7, 6, 1);
+                            pal(6, 5, 1);
+                            pal(5, 0, 1);
+                            pal(0, 0, 1);
+                        }
                         break;
                     }
                 case game_state.gameplay_dead:
