@@ -1687,19 +1687,31 @@ namespace mbh_platformer
                 if (pawn != null && pawn.hp > 0)
                 {
                     p.hp = pawn.hp;
-                    p.curanim = pawn.curanim;
-                    p.curframe = pawn.curframe;
-                    p.flipx = pawn.flipx;
+                    //p.curanim = pawn.curanim;
+                    //p.curframe = pawn.curframe;
+                    //p.flipx = pawn.flipx;
+                    //p.dx = pawn.dx;
+                    //p.dy = pawn.dy;
 
+                    // If the new pawn is the same type as the old type, then re-use it
+                    // as this is just a simple level transition.
+                    if (pawn != null && p.GetType() == pawn.GetType())
+                    {
+                        pawn.x = p.x;
+                        pawn.y = p.y;
+                    }
+                    else
+                    {
+                        pawn = p;
+                    }
                 }
                 else
                 {
                     // if this is the first pawn, give them full health.
                     // or if the current pawn is dead (we assume this means we are respawning).
                     p.hp = p.get_hp_max();
+                    pawn = p;
                 }
-
-                pawn = p;
             }
         }
 
@@ -2903,10 +2915,20 @@ namespace mbh_platformer
 
         public class map_link : sprite
         {
+            public enum transition_dir
+            {
+                vert,
+                horz,
+                none,
+            };
+
             public string dest_map_path;
+            public string dest_spawn_name;
+            public transition_dir trans_dir;
 
             public map_link()
             {
+                trans_dir = transition_dir.none;
             }
 
             public override void _update60()
@@ -2915,7 +2937,12 @@ namespace mbh_platformer
 
                 if (inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
+                    inst.active_map_link = this;
                     inst.queued_map = dest_map_path;
+                    // Store the offset relative to the map link, so that on the other side of the transition,
+                    // we can offset the same amount.
+                    //inst.spawn_offset.X = inst.pc.pawn.x - inst.game_cam.cam_pos().X;
+                    //inst.spawn_offset.Y = inst.pc.pawn.y - inst.game_cam.cam_pos().Y;
                 }
             }
 
@@ -3288,13 +3315,14 @@ namespace mbh_platformer
 
         public string current_map   = "Content/raw/test_map_hall_left.tmx";
         public string queued_map    = "Content/raw/test_map_hall_left.tmx";
+        public map_link active_map_link;
 
         public int cur_level_id = 0;
         public int gems_per_level = 4;
 
         public checkpoint last_activated_checkpoint;
 
-        int level_trans_time = 30;
+        int level_trans_time = 10;
 
         public class message_box
         {
@@ -3450,6 +3478,13 @@ namespace mbh_platformer
                             {
                                 if (string.Compare(o.Type, "spawn_point", true) == 0)
                                 {
+                                    if (!string.IsNullOrEmpty(active_map_link?.dest_spawn_name))
+                                    {
+                                        if (active_map_link.dest_spawn_name != o.Name)
+                                        {
+                                            continue;
+                                        }
+                                    }
                                     // Account for the case of a checkpoint.
                                     if (spawn_point == Vector2.Zero)
                                     {
@@ -3554,10 +3589,18 @@ namespace mbh_platformer
                                     ml.cw = ml.w;
                                     ml.ch = ml.h;
 
-                                    string dest_map_path;
-                                    if (o.Properties.TryGetValue("dest_map_path", out dest_map_path))
+                                    string out_string;
+                                    if (o.Properties.TryGetValue("dest_map_path", out out_string))
                                     {
-                                        ml.dest_map_path = dest_map_path;
+                                        ml.dest_map_path = out_string;
+                                    }
+                                    if (o.Properties.TryGetValue("dest_spawn_name", out out_string))
+                                    {
+                                        ml.dest_spawn_name = out_string;
+                                    }
+                                    if (o.Properties.TryGetValue("dir", out out_string))
+                                    {
+                                        ml.trans_dir = (map_link.transition_dir)Enum.Parse(typeof(map_link.transition_dir), out_string);
                                     }
 
                                     objs_add_queue.Add(ml);
@@ -3736,7 +3779,7 @@ namespace mbh_platformer
                 case game_state.level_trans_exit:
                     {
                         hit_pause.start_pause(hit_pause_manager.pause_reason.level_trans);
-                        if (time_in_state >= level_trans_time)
+                        if (time_in_state >= level_trans_time * 2)
                         {
                             set_game_state(game_state.level_trans_enter);
                         }
@@ -3747,6 +3790,7 @@ namespace mbh_platformer
                         hit_pause.start_pause(hit_pause_manager.pause_reason.level_trans);
                         if (time_in_state >= level_trans_time)
                         {
+                            active_map_link = null;
                             set_game_state(game_state.gameplay);
                         }
                         break;
@@ -3839,11 +3883,99 @@ namespace mbh_platformer
 
             if (game_cam != null)
             {
-                camera(game_cam.cam_pos().X, game_cam.cam_pos().Y);
+                Vector2 offset = Vector2.Zero;
+
+                if (active_map_link != null && active_map_link.trans_dir != map_link.transition_dir.none)
+                {
+                    if (cur_game_state == game_state.level_trans_exit && time_in_state > level_trans_time)
+                    {
+                        float time = time_in_state - level_trans_time;
+                        float amount = (float)(time) / (float)(level_trans_time);
+                        if (active_map_link.trans_dir == map_link.transition_dir.horz)
+                        {
+                            amount *= Res.X;
+                            if (pc.pawn.x < game_cam.cam_pos().X + Res.X * 0.5f)
+                            {
+                                amount *= -1.0f;
+                            }
+                            offset.X += amount;
+                        }
+                        else
+                        {
+                            amount *= Res.Y;
+                            if (pc.pawn.y < game_cam.cam_pos().Y + Res.Y * 0.5f)
+                            {
+                                amount *= -1.0f;
+                            }
+                            offset.Y += amount;
+                        }
+                    }
+                }
+                camera(game_cam.cam_pos().X + offset.X, game_cam.cam_pos().Y + offset.Y);
             }
             else
             {
                 camera(0, 0);
+            }
+
+            switch(cur_game_state)
+            {
+                case game_state.level_trans_exit:
+                    {
+                        int fade_step_time = level_trans_time / 3;
+                        if (time_in_state < 0)
+                        {
+
+                        }
+                        else if (time_in_state < fade_step_time)
+                        {
+                            pal(7, 6);
+                            pal(6, 5);
+                            pal(5, 0);
+                            pal(0, 0);
+                        }
+                        else if (time_in_state < fade_step_time * 2)
+                        {
+                            pal(7, 5);
+                            pal(6, 0);
+                            pal(5, 0);
+                            pal(0, 0);
+                        }
+                        else
+                        {
+                            pal(7, 0);
+                            pal(6, 0);
+                            pal(5, 0);
+                            pal(0, 0);
+                        }
+                        break;
+                    }
+                case game_state.level_trans_enter:
+                    {
+                        int fade_step_time = level_trans_time / 3;
+                        if (time_in_state < fade_step_time)
+                        {
+                            pal(7, 0);
+                            pal(6, 0);
+                            pal(5, 0);
+                            pal(0, 0);
+                        }
+                        else if (time_in_state < fade_step_time * 2)
+                        {
+                            pal(7, 5);
+                            pal(6, 0);
+                            pal(5, 0);
+                            pal(0, 0);
+                        }
+                        else
+                        {
+                            pal(7, 6);
+                            pal(6, 5);
+                            pal(5, 0);
+                            pal(0, 0);
+                        }
+                        break;
+                    }
             }
 
             switch (cur_game_state)
@@ -3869,6 +4001,14 @@ namespace mbh_platformer
             foreach (PicoXObj o in objs)
             {
                 o._draw();
+            }
+
+            pal();
+
+            // Draw the player here so that it draws over the fade out during level transition.
+            if (pc.pawn != null)
+            {
+                pc.pawn._draw();
             }
 
             // HUD
@@ -3996,63 +4136,10 @@ namespace mbh_platformer
                         break;
                     }
                 case game_state.level_trans_exit:
-                    {
-                        int fade_step_time = level_trans_time / 3;
-                        rectfill(0, 0, Res.X, 16, 7);
-                        draw_health();
-                        if (time_in_state < 0)
-                        {
-
-                        }
-                        else if (time_in_state < fade_step_time)
-                        {
-                            pal(7, 6, 1);
-                            pal(6, 5, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
-                        else if (time_in_state < fade_step_time * 2)
-                        {
-                            pal(7, 5, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
-                        else
-                        {
-                            pal(7, 0, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
-                        break;
-                    }
                 case game_state.level_trans_enter:
                     {
-                        int fade_step_time = level_trans_time / 3;
                         rectfill(0, 0, Res.X, 16, 7);
                         draw_health();
-                        if (time_in_state < fade_step_time)
-                        {
-                            pal(7, 0, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
-                        else if (time_in_state < fade_step_time * 2)
-                        {
-                            pal(7, 5, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
-                        else
-                        {
-                            pal(7, 6, 1);
-                            pal(6, 5, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
-                        }
                         break;
                     }
                 case game_state.gameplay_dead:
