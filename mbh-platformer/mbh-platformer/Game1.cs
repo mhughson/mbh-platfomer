@@ -145,7 +145,7 @@ namespace mbh_platformer
             public float cx { get { return x + cx_offset; } }
             public float cy { get { return y + cy_offset; } }
             public int jump_hold_time = 0;//how long jump is held
-            public bool grounded = false;//on ground
+            public byte grounded = 0;//on ground
             public int airtime = 0;//time since groundeds
             public float scaley = 0;
 
@@ -2060,7 +2060,7 @@ namespace mbh_platformer
                     {
                         if (!platformed)
                         {
-                            if (self.grounded)
+                            if (self.grounded != 0)
                             {
 
                                 self.dx *= self.dcc;
@@ -2147,7 +2147,7 @@ namespace mbh_platformer
                         //is player on ground recently.
                         //allow for jump right after 
                         //walking off ledge.
-                        var on_ground = (self.grounded || self.airtime < 5);
+                        var on_ground = (self.grounded != 0 || self.airtime < 5);
                         //was btn presses recently?
                         //allow for pressing right before
                         //hitting ground.
@@ -2171,11 +2171,24 @@ namespace mbh_platformer
                         }
                         else if ((on_ground && new_jump_btn && jump_count == 0))
                         {
-                            jump_hold_time += 1;
-                            jump_count++;
-                            dash_time = 0;
-                            is_dashing = false;
-                            self.dy = mod_jump_speed;
+                            // Are we jumping off a pass through floor with "down" held?
+                            if ((grounded & (1 << 5)) != 0 && btn(3))
+                            {
+                                // Teleport below the floor to avoid collision.
+                                y += 8;
+
+                                // Artifically increment airtime to avoid hitting 
+                                // "late jump" code in "on_ground" calculation above here.
+                                self.airtime = 5;
+                            }
+                            else
+                            {
+                                jump_hold_time += 1;
+                                jump_count++;
+                                dash_time = 0;
+                                is_dashing = false;
+                                self.dy = mod_jump_speed;
+                            }
                         }
                         else if (jump_count < max_jump_count && is_dashing && jump_button.is_pressed)
                         {
@@ -2219,7 +2232,7 @@ namespace mbh_platformer
                 {
                     next_anim = ("jump");
 
-                    self.grounded = false;
+                    self.grounded = 0;
                     self.airtime += 1;
                     if (self.airtime >= 5 && jump_count == 0)
                     {
@@ -2264,7 +2277,7 @@ namespace mbh_platformer
 
                 //handle playing correct animation when
                 //on the ground.
-                if (self.grounded && !is_dashing)
+                if (self.grounded != 0 && !is_dashing)
                 {
                     if (br)
                     {
@@ -2300,7 +2313,7 @@ namespace mbh_platformer
 
                 if (is_dashing)
                 {
-                    if (grounded)
+                    if (grounded != 0)
                     {
                         next_anim = ("dash");
                     }
@@ -2310,7 +2323,7 @@ namespace mbh_platformer
                     }
                 }
 
-                if (grounded && dash_time <= 0)
+                if (grounded != 0 && dash_time <= 0)
                 {
                     dash_count = 0;
                 }
@@ -2718,6 +2731,8 @@ namespace mbh_platformer
 
             float? new_y = null;
 
+            byte collision_flag = 0;
+
             for (float i = -(offset_x); i <= (offset_x); i += 2)
             {
                 var box_x = self.cx;
@@ -2728,10 +2743,11 @@ namespace mbh_platformer
 
                 var y = flr((box_y + box_h_half) / 8);
                 var y_actual = flr((self.y + box_h_half) / 8);
-
-                if (fget(mget(flr((box_x + i) / 8), y), 0))
+                byte tile_flag = fget(mget(flr((box_x + i) / 8), y));
+                if ((tile_flag & (1 << 0 | 1 << 5)) != 0)
                 {
                     new_y = (flr(y) * 8) - box_h_half + (self.y - self.cy);
+                    collision_flag = tile_flag;
                     break;
                 }
             }
@@ -2752,6 +2768,8 @@ namespace mbh_platformer
                             if (inst.intersects_box_box(self.cx, self.cy + self.ch * 0.5f, self.cw * 0.5f, 1, v.cx, v.cy, v.cw * 0.5f, (v.ch + 2) * 0.5f))
                             {
                                 new_y = (/*flr*/(v.cy - v.ch * 0.5f)) - (self.ch * 0.5f) - (self.cy_offset);
+                                // fake standard collision.
+                                collision_flag = 1 << 0;
                                 break;
                             }
                         }
@@ -2763,7 +2781,7 @@ namespace mbh_platformer
             {
                 self.dy = 0;
                 self.y = new_y.Value;
-                self.grounded = true;
+                self.grounded = collision_flag;
                 self.airtime = 0;
                 return true;
             }
