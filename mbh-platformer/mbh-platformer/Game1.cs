@@ -703,7 +703,8 @@ namespace mbh_platformer
 
                 if (solid)
                 {
-                    inst.collide_floor(this);
+                    Vector2 hit_point;
+                    inst.collide_floor(this, out hit_point);
                     inst.collide_roof(this);
                 }
 
@@ -1815,6 +1816,10 @@ namespace mbh_platformer
 
             bool in_water = false;
 
+            // The direction of the current dash. If not dashing,
+            // this will be zero.
+            Vector2 dash_dir = Vector2.Zero;
+
             public player_side() : base()
             {
                 //animation definitions.
@@ -1921,6 +1926,8 @@ namespace mbh_platformer
 
             public override void start_dash_bounce(ref Vector2 hit_point)
             {
+                // Clear out the dash direction since we hit a surface of something.
+                dash_dir = Vector2.Zero;
                 dy = -8;
                 dx = 5 * -Math.Sign(hit_point.X - cx);
                 dash_time = 0;
@@ -2023,6 +2030,8 @@ namespace mbh_platformer
                 //track button presses
                 var bl = btn(0); //left
                 var br = btn(1); //right
+                var bu = btn(2); //up
+                var bd = btn(3); //down
                 dash_button._update60();
 
                 if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && (controller.found_artifacts & artifacts.dash_pack) != 0)
@@ -2032,13 +2041,45 @@ namespace mbh_platformer
                     dy = 0;
                     self.jump_hold_time = 0; // kill jump
 
-                    if (br)
+                    // Assume not direction to start.
+                    dash_dir = Vector2.Zero;
+
+                    // First check up and down to let that take
+                    // presendence, since that feels better.
+                    if (bu)
+                    {
+                        dash_dir.Y = -1;
+                        // Clear the x momentum.
+                        dx = 0;
+                    }
+                    else if (bd)
+                    {
+                        dash_dir.Y = 1;
+                        dx = 0;
+                    }
+                    else if (br)
                     {
                         self.flipx = false;
+                        dash_dir.X = 1;
                     }
                     else if (bl)
                     {
                         self.flipx = true;
+                        dash_dir.X = -1;
+                    }
+                    else
+                    {
+                        // If no direction is being pressed but we are starting a
+                        // dash, fall back to the currently looking direction of the
+                        // player.
+                        if (self.flipx)
+                        {
+                            dash_dir.X = -1;
+                        }
+                        else
+                        {
+                            dash_dir.X = 1;
+                        }
                     }
                 }
 
@@ -2073,18 +2114,32 @@ namespace mbh_platformer
                     }
                 }
 
-                dash_time = max(0, dash_time - 1);
+                // No expiry for down dash. It feels better this way since
+                // falling 
+                if (dash_dir.Y <= 0)
+                {
+                    dash_time = max(0, dash_time - 1);
+                }
 
                 const float dash_speed = 2.0f;
                 if (is_dashing)
                 {
-                    if (flipx)
+                    if (dash_dir.X < 0)
                     {
                         dx = -dash_speed;
                     }
-                    else
+                    else if (dash_dir.X > 0)
                     {
                         dx = dash_speed;
+                    }
+                    if (dash_dir.Y < 0)
+                    {
+                        dy = -dash_speed;
+                    }
+                    else if (dash_dir.Y > 0)
+                    {
+                        // ground pound is faster.
+                        dy = dash_speed * 4;
                     }
                 }
                 else if (!platformed)
@@ -2199,6 +2254,9 @@ namespace mbh_platformer
                             dash_time = 0;
                             is_dashing = false;
                             self.dy = mod_jump_speed;
+
+                            // Starting a dash out, so dash is cancelled.
+                            dash_dir = Vector2.Zero;
                         }
                     }
                     else
@@ -2214,21 +2272,26 @@ namespace mbh_platformer
                     float grav_mod = in_water ? 0.5f : 1.0f;
 
                     //move in y
-                    self.dy += self.grav * grav_mod;
+                    if (dash_dir.Y == 0)
+                    {
+                        self.dy += self.grav * grav_mod;
+                    }
                 }
 
                 self.dy = mid(-self.max_dy, self.dy, self.max_dy);
-                if (!is_dashing) // re-eval is_dashing since we might have just started jumping.
+
+                // Apply gravity if not dashing, or vertical dash.
+                if (!is_dashing || dash_dir.Y != 0) // re-eval is_dashing since we might have just started jumping.
                 {
                     self.y += self.dy;
                 }
-                else
+                else if (dash_dir.Y == 0) // is horizontal dashing.
                 {
                     self.dy = 0; // kill building pull down
                 }
 
                 //floor
-                if (!inst.collide_floor(self))
+                if (!inst.collide_floor(self, out hit_point))
                 {
                     next_anim = ("jump");
 
@@ -2243,10 +2306,23 @@ namespace mbh_platformer
                 else
                 {
                     jump_count = 0;
+                    // Are we downward dashing?
+                    if (dash_dir.Y > 0 & is_dashing)
+                    {
+                        start_dash_bounce(ref hit_point);
+                    }
                 }
 
                 //roof
-                inst.collide_roof(self);
+                if (inst.collide_roof(self))
+                {
+                    // TODO: For now just kill dash. Should probably do some of 
+                    // start_dash_bounce() to trigger tiles changes etc, but
+                    // not the bouncing part.
+                    dash_dir = Vector2.Zero;
+                    dash_time = 0;
+                    dy = 0;
+                }
                 
                 Tuple<float, float>[] hit_tests = new Tuple<float, float>[]
                 {
@@ -2323,9 +2399,18 @@ namespace mbh_platformer
                     }
                 }
 
-                if (grounded != 0 && dash_time <= 0)
+                // Has the dash expired?
+                if (dash_time <= 0)
                 {
-                    dash_count = 0;
+                    // We are no longer dashing in any direction.
+                    dash_dir = Vector2.Zero;
+
+                    // If we are also on the ground, reset the dash count, so
+                    // the user can dash again.
+                    if (grounded != 0)
+                    {
+                        dash_count = 0;
+                    }
                 }
 
                 //flip
@@ -2716,8 +2801,12 @@ namespace mbh_platformer
         //check if pushing into floor tile and resolve.
         //requires self.dx,self.x,self.y,self.grounded,self.airtime and 
         //assumes tile flag 0 or 1 == solid
-        bool collide_floor(sprite self)
+        bool collide_floor(sprite self, out Vector2 hit_point)
         {
+            //didn't hit anything solid.
+            hit_point.X = 0;
+            hit_point.Y = 0;
+
             //only check for ground when falling.
             if (self.dy < 0)
             {
@@ -2748,6 +2837,10 @@ namespace mbh_platformer
                 {
                     new_y = (flr(y) * 8) - box_h_half + (self.y - self.cy);
                     collision_flag = tile_flag;
+
+                    hit_point.X = self.cx + i;
+                    hit_point.Y = self.cy + offset_y;
+
                     break;
                 }
             }
@@ -2770,6 +2863,11 @@ namespace mbh_platformer
                                 new_y = (/*flr*/(v.cy - v.ch * 0.5f)) - (self.ch * 0.5f) - (self.cy_offset);
                                 // fake standard collision.
                                 collision_flag = 1 << 0;
+
+                                // We don't really know the hit point, so just put it at the center on the edge that hit.
+                                hit_point.X = self.cx;
+                                hit_point.Y = self.cy + offset_y;
+
                                 break;
                             }
                         }
