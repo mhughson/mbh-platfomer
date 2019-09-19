@@ -63,12 +63,12 @@
  </tile>
  <tile id="864">
   <properties>
-   <property name="Flag" type="int" value="32"/>
+   <property name="Flag" type="int" value="64"/>
   </properties>
  </tile>
  <tile id="865">
   <properties>
-   <property name="Flag" type="int" value="32"/>
+   <property name="Flag" type="int" value="64"/>
   </properties>
  </tile>
  <tile id="868">

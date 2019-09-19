@@ -2227,7 +2227,7 @@ namespace mbh_platformer
                         else if ((on_ground && new_jump_btn && jump_count == 0))
                         {
                             // Are we jumping off a pass through floor with "down" held?
-                            if ((grounded & (1 << 5)) != 0 && btn(3))
+                            if ((grounded & (1 << 6)) != 0 && btn(3))
                             {
                                 // Teleport below the floor to avoid collision.
                                 y += 8;
@@ -2833,7 +2833,7 @@ namespace mbh_platformer
                 var y = flr((box_y + box_h_half) / 8);
                 var y_actual = flr((self.y + box_h_half) / 8);
                 byte tile_flag = fget(mget(flr((box_x + i) / 8), y));
-                if ((tile_flag & (1 << 0 | 1 << 5)) != 0)
+                if ((tile_flag & (1 << 0 | 1 << 6)) != 0)
                 {
                     new_y = (flr(y) * 8) - box_h_half + (self.y - self.cy);
                     collision_flag = tile_flag;
