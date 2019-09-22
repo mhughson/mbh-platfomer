@@ -608,7 +608,7 @@ namespace mbh_platformer
 
             protected bool has_rock_armor = false;
 
-            public badguy()
+            public badguy(float dir)
             {
                 anims = new Dictionary<string, anim>()
                 {
@@ -633,7 +633,9 @@ namespace mbh_platformer
                 cw = 16;
                 ch = 16;
 
-                dx = -0.5f;
+                dx = 0.5f * dir;
+
+                flipx = dir < 0;
 
                 stay_on = true;
             }
@@ -897,7 +899,7 @@ namespace mbh_platformer
 
         public class chopper_body : badguy
         {
-            public chopper_body()
+            public chopper_body() : base(0)
             {
                 anims = new Dictionary<string, anim>()
                 {
@@ -921,7 +923,7 @@ namespace mbh_platformer
 
         public class chopper : badguy
         {
-            public chopper()
+            public chopper() : base(0)
             {
                 flying = new flying_def()
                 {
@@ -989,7 +991,7 @@ namespace mbh_platformer
 
         public class lava_splash : badguy
         {
-            public lava_splash()
+            public lava_splash(float dir) : base(dir)
             {
                 anims = new Dictionary<string, anim>()
                 {
@@ -1066,7 +1068,7 @@ namespace mbh_platformer
 
         public class steam_splash : badguy
         {
-            public steam_splash()
+            public steam_splash() : base(0)
             {
                 anims = new Dictionary<string, anim>()
                 {
@@ -1171,7 +1173,7 @@ namespace mbh_platformer
                         inst.objs_remove_queue.Add(this);
                         return;
                     }
-                    inst.objs_add_queue.Add(new lava_splash() { x = x, y = y, flipx = dir < 0 ? true : false, /*, dx = rnd(1) * dir*/});
+                    inst.objs_add_queue.Add(new lava_splash(dir) { x = x, y = y, /*, dx = rnd(1) * dir*/});
                 }
 
 
@@ -1183,7 +1185,7 @@ namespace mbh_platformer
         {
             int idle_ticks = 0;
 
-            public lava_blaster(float dir)
+            public lava_blaster(float dir) : base(dir)
             {
 
                 anims = new Dictionary<string, anim>()
@@ -1242,8 +1244,6 @@ namespace mbh_platformer
                 ch = 24;
 
                 dx = 0;
-
-                flipx = dir < 0;
 
                 has_rock_armor = true;
 
@@ -1898,6 +1898,19 @@ namespace mbh_platformer
                         }
                     },
                     {
+                        "dash_down",
+                        new anim()
+                        {
+                            h =32,
+                            ticks=5,//how long is each frame shown.
+                            frames= new int[][] 
+                            {
+                                create_anim_frame(332, 4, 4),
+                                create_anim_frame(396, 4, 4),
+                            },
+                        }
+                    },
+                    {
                         "taking_hit",
                         new anim()
                         {
@@ -2046,13 +2059,14 @@ namespace mbh_platformer
 
                     // First check up and down to let that take
                     // presendence, since that feels better.
-                    if (bu)
-                    {
-                        dash_dir.Y = -1;
-                        // Clear the x momentum.
-                        dx = 0;
-                    }
-                    else if (bd)
+                    //if (bu)
+                    //{
+                    //    dash_dir.Y = -1;
+                    //    // Clear the x momentum.
+                    //    dx = 0;
+                    //}
+                    //else 
+                    if (bd)
                     {
                         dash_dir.Y = 1;
                         dx = 0;
@@ -2159,7 +2173,7 @@ namespace mbh_platformer
                 Vector2 hit_point = new Vector2();
                 if (inst.collide_side(self, out hit_point))
                 {
-                    if (is_dashing)
+                    if (is_dashing && dash_dir.X != 0)
                     {
                         start_dash_bounce(ref hit_point);
                         is_dashing = false;
@@ -2309,6 +2323,7 @@ namespace mbh_platformer
                     // Are we downward dashing?
                     if (dash_dir.Y > 0 & is_dashing)
                     {
+                        inst.game_cam.shake(10, 3);
                         start_dash_bounce(ref hit_point);
                     }
                 }
@@ -2395,7 +2410,14 @@ namespace mbh_platformer
                     }
                     else
                     {
-                        next_anim = "dash_air";
+                        if (dash_dir.Y != 0)
+                        {
+                            next_anim = "dash_down";
+                        }
+                        else
+                        {
+                            next_anim = "dash_air";
+                        }
                     }
                 }
 
@@ -3667,6 +3689,16 @@ namespace mbh_platformer
                                 {
                                     objs_add_queue.Add(
                                             new steam_spawner()
+                                            {
+                                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                            }
+                                        );
+                                }
+                                else if (string.Compare(o.Type, "spawn_rolley", true) == 0)
+                                {
+                                    objs_add_queue.Add(
+                                            new badguy(Int32.Parse(o.Properties["dir"]))
                                             {
                                                 x = (float)o.X + ((float)o.Width * 0.5f),
                                                 y = (float)o.Y + ((float)o.Height * 0.5f),
