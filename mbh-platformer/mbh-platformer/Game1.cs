@@ -151,6 +151,7 @@ namespace mbh_platformer
 
             public bool is_platform = false;
             public bool stay_on = false;
+            public bool launched = false;
 
             public flying_def flying = null;
             public virtual int get_hp_max() { return 1; }
@@ -638,6 +639,8 @@ namespace mbh_platformer
                 flipx = dir < 0;
 
                 stay_on = true;
+
+                hp = 1;
             }
 
             public override void _update60()
@@ -655,7 +658,10 @@ namespace mbh_platformer
 
                 //move in x
 
-                x += dx;
+                if (!launched)
+                {
+                    x += dx;
+                }
 
 
                 if (solid)
@@ -702,11 +708,14 @@ namespace mbh_platformer
                     }
                 }
 
-
+                grounded = 0;
                 if (solid)
                 {
                     Vector2 hit_point;
-                    inst.collide_floor(this, out hit_point);
+                    if (inst.collide_floor(this, out hit_point))
+                    {
+                        launched = false;
+                    }
                     inst.collide_roof(this);
                 }
 
@@ -741,7 +750,7 @@ namespace mbh_platformer
                             }
                         }
 
-                        if (cleared_attacker && bounced && !touch_damage && inst.intersects_obj_obj(inst.pc.pawn, this))
+                        if (cleared_attacker && (bounced || launched) && !touch_damage && inst.intersects_obj_obj(inst.pc.pawn, this))
                         {
                             if (inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame)
                             {
@@ -753,6 +762,28 @@ namespace mbh_platformer
                     }
 
                     return;
+                }
+
+                if (launched)
+                {
+                    if (!cleared_attacker)
+                    {
+                        if (!inst.intersects_obj_obj(inst.pc.pawn, this))
+                        {
+                            cleared_attacker = true;
+                        }
+                    }
+
+                    if (cleared_attacker && launched && !touch_damage && inst.intersects_obj_obj(inst.pc.pawn, this))
+                    {
+                        if (inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame)
+                        {
+                            on_bounce(inst.pc.pawn, true);
+                            Vector2 pos = new Vector2(x, y);
+                            inst.pc.pawn.start_dash_bounce(ref pos);
+                            launched = false;
+                        }
+                    }
                 }
 
                 // TODO
@@ -880,6 +911,13 @@ namespace mbh_platformer
                     cleared_attacker = false;
 
                 }
+            }
+
+            public void on_launch()
+            {
+                dy = -3;
+                cleared_attacker = false;
+                launched = true;
             }
 
             protected virtual void on_stomp()
@@ -2325,6 +2363,18 @@ namespace mbh_platformer
                     {
                         inst.game_cam.shake(10, 3);
                         start_dash_bounce(ref hit_point);
+
+                        // hack. Should probably be distance based.
+                        foreach(var o in inst.objs)
+                        {
+                            if (o.GetType() == typeof(badguy))
+                            {
+                                if ((o as badguy).grounded != 0)
+                                {
+                                    (o as badguy).on_launch();
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -2906,10 +2956,12 @@ namespace mbh_platformer
                 return true;
             }
 
-            if (self.stay_on)
+            if (self.stay_on && !self.launched)
             {
                 self.dx *= -1;
                 self.x += self.dx;
+                // fake collision flag
+                collision_flag = 1 << 0;
             }
 
             return false;
