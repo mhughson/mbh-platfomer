@@ -1771,6 +1771,7 @@ namespace mbh_platformer
             dash_pack       = 1 << 4,
             jump_boots      = 1 << 5,
             rock_smasher    = 1 << 6,
+            ground_slam     = 1 << 7,
 
             MAX =  1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
 
@@ -2104,7 +2105,7 @@ namespace mbh_platformer
                     //    dx = 0;
                     //}
                     //else 
-                    if (bd)
+                    if (bd && (controller.found_artifacts & artifacts.ground_slam) != 0)
                     {
                         dash_dir.Y = 1;
                         dx = 0;
@@ -3294,6 +3295,12 @@ namespace mbh_platformer
                         case artifacts.rock_smasher:
                             {
                                 display_name = "rock smasher";
+                                break;
+                            }
+
+                        case artifacts.ground_slam:
+                            {
+                                display_name = "ground slam";
                                 break;
                             }
 
