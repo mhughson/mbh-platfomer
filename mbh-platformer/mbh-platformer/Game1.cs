@@ -833,6 +833,7 @@ namespace mbh_platformer
                                         for (int j = 0; j <= 1; j++)
                                         {
                                             var final_x = (grid_pos.X + i) * 8 + 4;
+
                                             var final_y = (grid_pos.Y + j) * 8 + 4;
                                             inst.objs_add_queue.Add(
                                                 new simple_fx_particle(-1 + (i * 2), (1 - j + 1) * -3, (8 + i) + ((52 + j) * 16))
@@ -1869,11 +1870,14 @@ namespace mbh_platformer
                         "stand",
                         new anim()
                         {
-                            ticks=1,//how long is each frame shown.
+                            ticks=20,//how long is each frame shown.
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
                             frames = new int[][]
                             {
                                 create_anim_frame(0, 4, 3),
+                                create_anim_frame(4, 4, 3),
+                                create_anim_frame(8, 4, 3),
+                                create_anim_frame(124, 4, 3),
                             }
                         }
                     },
@@ -1902,6 +1906,18 @@ namespace mbh_platformer
                             frames= new int[][]
                             {
                                 create_anim_frame(56-16, 4, 5, 1),
+                            },//what frames are shown.
+                        }
+                    },
+                    {
+                        "fall",
+                        new anim()
+                        {
+                            h = 32+8,
+                            ticks=1,//how long is each frame shown.
+                            frames= new int[][]
+                            {
+                                create_anim_frame(256-16, 4, 5, 1),
                             },//what frames are shown.
                         }
                     },
@@ -2346,7 +2362,14 @@ namespace mbh_platformer
                 //floor
                 if (!inst.collide_floor(self, out hit_point))
                 {
-                    next_anim = ("jump");
+                    if (dy < 0)
+                    {
+                        next_anim = ("jump");
+                    }
+                    else
+                    {
+                        next_anim = "fall";
+                    }
 
                     self.grounded = 0;
                     self.airtime += 1;
@@ -4443,7 +4466,9 @@ namespace mbh_platformer
                 btnstr += " ";
             }
 
-            print(btnstr, 0, Res.Y - 4, 0);
+            print(btnstr, 0, Res.Y - 5, 0);
+
+            print(objs.Count.ToString(), btnstr.Length * 4, Res.Y - 5, 1);
         }
 
         public override string GetMapString()
