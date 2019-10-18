@@ -1774,6 +1774,9 @@ namespace mbh_platformer
             rock_smasher    = 1 << 6,
             ground_slam     = 1 << 7,
 
+            // TODO: Re-breather for underwater
+            // TODO: Light for caves
+
             MAX =  1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
 
             // Alien relics
@@ -3533,8 +3536,8 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map   = "Content/raw/test_map_hall_left.tmx";
-        public string queued_map    = "Content/raw/test_map_hall_left.tmx";
+        public string current_map   = "Content/raw/map_ss_vert_template.tmx";
+        public string queued_map    = "Content/raw/map_ss_vert_template.tmx";
         public map_link active_map_link;
 
         public int cur_level_id = 0;
@@ -3898,6 +3901,27 @@ namespace mbh_platformer
                         pc.possess(pawn);
 
                         const int hud_height = 16;
+
+                        // Account for the fact that the camera area can be smaller than the game resolution.
+                        // This could be fixed in content by always setting a min cam size of ResX/Y, but this
+                        // allows us to change the resolution without having to update content.
+                        Vector2 cam_area = cam_area_max - cam_area_min;
+                        Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
+
+                        // Is the camera area smaller than the resolution? If so, adjust it (while keeping
+                        // it centered around the same point) to match the resolution.
+                        // NOTE: At time of writing we still render the map outside the camera area.
+                        if (cam_area.X < Res.X)
+                        {
+                            cam_area_min.X -= cam_delta_half.X;
+                            cam_area_max.X += cam_delta_half.X;
+                        }
+                        if (cam_area.Y < Res.Y)
+                        {
+                            cam_area_min.Y -= cam_delta_half.Y - 8;
+                            cam_area_max.Y += cam_delta_half.Y - 8;
+                        }
+
                         game_cam = new cam(pc)
                         {
                             pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
@@ -4297,14 +4321,14 @@ namespace mbh_platformer
                 case game_state.main_menu:
                     {
                         var str = "dash maximus";
-                        print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
+                        print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, Res.Y * 0.5f, 7);
                         str = "-dx-";
-                        print(str, 128 - (str.Length * 0.5f) * 4, 120 + 6, 7);
+                        print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, Res.Y * 0.5f + 6, 7);
                         break;
                     }
                 case game_state.gameplay:
                     {
-                        rectfill(0, 0, Res.X, 16, 7);
+                        rectfill(0, 0, Res.X, 15, 7);
                         draw_health();
 
                         //if (time_in_state < 15)
@@ -4501,7 +4525,8 @@ namespace mbh_platformer
             return "";
         }
 
-        public Vector2 Res = new Vector2(256, 240); // NES
+        public Vector2 Res = new Vector2(448, 240); // NES WS
+        //public Vector2 Res = new Vector2(256, 240); // NES
         //public Vector2 Res = new Vector2(160, 144); // GB
 
         public override Tuple<int, int> GetResolution() { return new Tuple<int, int>((int)Res.X, (int)Res.Y); }

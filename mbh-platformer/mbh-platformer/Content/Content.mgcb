@@ -16,6 +16,15 @@
 #begin raw/abby.tmx
 /copy:raw/abby.tmx
 
+#begin raw/map_ow_top.tmx
+/copy:raw/map_ow_top.tmx
+
+#begin raw/map_ss_horz_template.tmx
+/copy:raw/map_ss_horz_template.tmx
+
+#begin raw/map_ss_vert_template.tmx
+/copy:raw/map_ss_vert_template.tmx
+
 #begin raw/pico8_font.png
 /importer:TextureImporter
 /processor:TextureProcessor
