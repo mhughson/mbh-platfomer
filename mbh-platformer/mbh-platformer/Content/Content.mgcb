@@ -19,6 +19,12 @@
 #begin raw/map_ow_top.tmx
 /copy:raw/map_ow_top.tmx
 
+#begin raw/map_ss_alpha_00.tmx
+/copy:raw/map_ss_alpha_00.tmx
+
+#begin raw/map_ss_alpha_01.tmx
+/copy:raw/map_ss_alpha_01.tmx
+
 #begin raw/map_ss_horz_template.tmx
 /copy:raw/map_ss_horz_template.tmx
 

@@ -3536,8 +3536,8 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map   = "Content/raw/map_ss_vert_template.tmx";
-        public string queued_map    = "Content/raw/map_ss_vert_template.tmx";
+        public string current_map   = "Content/raw/map_ow_top.tmx";
+        public string queued_map    = "Content/raw/map_ow_top.tmx";
         public map_link active_map_link;
 
         public int cur_level_id = 0;
