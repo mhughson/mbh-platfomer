@@ -257,6 +257,16 @@ namespace mbh_platformer
 
                 tick_anim();
             }
+            
+            public virtual void push_pal()
+            {
+                inst.apply_pal(inst.get_cur_pal(true));
+            }
+
+            public virtual void pop_pal()
+            {
+                pal();
+            }
 
             public override void _draw()
             {
@@ -811,7 +821,7 @@ namespace mbh_platformer
 
                             if ((inst.pc.pawn.get_is_dashing() || inst.pc.pawn.dashing_last_frame) && !touch_damage)
                             {
-                                bool rock_smashable = (inst.pc.found_artifacts & artifacts.rock_smasher) != 0 && has_rock_armor;
+                                bool rock_smashable = inst.pc.has_artifact(artifacts.rock_smasher) && has_rock_armor;
                                 bool had_rock_armor = has_rock_armor;
 
                                 //Vector2 pos = new Vector2(x, y);
@@ -873,7 +883,7 @@ namespace mbh_platformer
                         }
                     }
                 }
-               
+
                 base._update60();
             }
 
@@ -1207,7 +1217,7 @@ namespace mbh_platformer
                 if (ticks % 5 == 0)
                 {
                     x += dir * speed;// * (rnd(8) + 8);
-                    if (fget(mget(flr(x/8.0f), flr(y/8.0f)), 0) || !fget(mget(flr(x / 8.0f), flr(y / 8.0f) + 1), 0))
+                    if (fget(mget(flr(x / 8.0f), flr(y / 8.0f)), 0) || !fget(mget(flr(x / 8.0f), flr(y / 8.0f) + 1), 0))
                     {
                         inst.objs_remove_queue.Add(this);
                         return;
@@ -1457,7 +1467,7 @@ namespace mbh_platformer
 
                 if (tick >= 0.5f)
                 {
-                    inst.change_meta_tile(flr(x/8), flr(y/8), new int[] { 868, 869, 884, 885 });
+                    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 });
                     inst.objs_remove_queue.Add(this);
                 }
 
@@ -1542,7 +1552,7 @@ namespace mbh_platformer
                 };
 
                 set_anim("walk_down");
-                
+
                 w = 16;
                 h = 16;
 
@@ -1590,7 +1600,7 @@ namespace mbh_platformer
                         set_anim("walk_up");
                     }
                 }
-                
+
 
                 const float tile_size = 16;
                 //Vector2 dest = new Vector2(dest_x, dest_y);
@@ -1684,7 +1694,7 @@ namespace mbh_platformer
         public class player_controller : sprite
         {
             public player_pawn pawn { get; protected set; }
-            
+
             public artifacts found_artifacts = artifacts.none;// artifacts.health_00 | artifacts.dash_pack | artifacts.jump_boots;
 
             // Iinitial implementation supports 8 levels with up to 4 gems on 
@@ -1716,9 +1726,11 @@ namespace mbh_platformer
             {
                 base._draw();
 
+                pawn.push_pal();
                 pawn._draw();
+                pawn.pop_pal();
             }
-            
+
             public virtual void possess(player_pawn p)
             {
                 p.set_controller(this);
@@ -1753,31 +1765,37 @@ namespace mbh_platformer
                     pawn = p;
                 }
             }
+            
+            public bool has_artifact(artifacts artifact)
+            {
+                return (found_artifacts & artifact) != 0;
+            }
         }
 
         [Flags]
         public enum artifacts : Int32
         {
-            none            = 0,
+            none = 0,
 
             // Health pieces
-            health_00       = 1 << 0,
-            health_01       = 1 << 1,
-            health_02       = 1 << 2,
-            health_03       = 1 << 3,
-            health_start    = health_00,
-            health_end      = health_03,
+            health_00 = 1 << 0,
+            health_01 = 1 << 1,
+            health_02 = 1 << 2,
+            health_03 = 1 << 3,
+            health_start = health_00,
+            health_end = health_03,
 
             // Human tech
-            dash_pack       = 1 << 4,
-            jump_boots      = 1 << 5,
-            rock_smasher    = 1 << 6,
-            ground_slam     = 1 << 7,
+            dash_pack = 1 << 4,
+            jump_boots = 1 << 5,
+            rock_smasher = 1 << 6,
+            ground_slam = 1 << 7,
+            light = 1 << 8,
 
             // TODO: Re-breather for underwater
             // TODO: Light for caves
 
-            MAX =  1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
+            MAX = 1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
 
             // Alien relics
         }
@@ -1961,7 +1979,7 @@ namespace mbh_platformer
                         {
                             h =32,
                             ticks=5,//how long is each frame shown.
-                            frames= new int[][] 
+                            frames= new int[][]
                             {
                                 create_anim_frame(332, 4, 4),
                                 create_anim_frame(396, 4, 4),
@@ -2018,7 +2036,7 @@ namespace mbh_platformer
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
                     inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
-                if (fget(mget(mx, my), 5) && (controller.found_artifacts & artifacts.rock_smasher) != 0)
+                if (fget(mget(mx, my), 5) && inst.pc.has_artifact(artifacts.rock_smasher))
                 {
                     var grid_pos = inst.map_pos_to_meta_tile(mx, my);
 
@@ -2060,7 +2078,7 @@ namespace mbh_platformer
                 {
                     return;
                 }
-                
+
                 if (dash_time > 0)
                 {
                     dashing_last_frame = true;
@@ -2105,7 +2123,7 @@ namespace mbh_platformer
                 var bd = btn(3); //down
                 dash_button._update60();
 
-                if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && (controller.found_artifacts & artifacts.dash_pack) != 0)
+                if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && inst.pc.has_artifact(artifacts.dash_pack))
                 {
                     dash_count = 1;
                     dash_time = 30;
@@ -2124,7 +2142,7 @@ namespace mbh_platformer
                     //    dx = 0;
                     //}
                     //else 
-                    if (bd && (controller.found_artifacts & artifacts.ground_slam) != 0)
+                    if (bd && inst.pc.has_artifact(artifacts.ground_slam))
                     {
                         dash_dir.Y = 1;
                         dx = 0;
@@ -2249,7 +2267,7 @@ namespace mbh_platformer
                     inst.objs.Add(new water_splash()
                     {
                         x = x,
-                        y = flr(y/16) * 16.0f - 8.0f,
+                        y = flr(y / 16) * 16.0f - 8.0f,
                     });
                 }
 
@@ -2280,7 +2298,7 @@ namespace mbh_platformer
                         //hitting ground.
                         var new_jump_btn = self.jump_button.ticks_down < 10;
 
-                        int max_jump_count = ((controller.found_artifacts & artifacts.jump_boots) != 0) ? 2 : 1;
+                        int max_jump_count = (controller.has_artifact(artifacts.jump_boots)) ? 2 : 1;
                         //is player continuing a jump
                         //or starting a new one?
                         if (self.jump_hold_time > 0)
@@ -2392,7 +2410,7 @@ namespace mbh_platformer
                         start_dash_bounce(ref hit_point);
 
                         // hack. Should probably be distance based.
-                        foreach(var o in inst.objs)
+                        foreach (var o in inst.objs)
                         {
                             if (o.GetType() == typeof(badguy))
                             {
@@ -2415,7 +2433,7 @@ namespace mbh_platformer
                     dash_time = 0;
                     dy = 0;
                 }
-                
+
                 Tuple<float, float>[] hit_tests = new Tuple<float, float>[]
                 {
                     new Tuple<float, float>(-cw * 0.25f, 0),
@@ -2570,6 +2588,13 @@ namespace mbh_platformer
                         inst.objs_add_queue.Add(o);
                     }
                 }
+            }
+
+            public override void push_pal()
+            {
+                // don't call super.
+                //base.push_pal();
+                inst.apply_pal(inst.default_pal);
             }
 
             public override void _draw()
@@ -2973,7 +2998,7 @@ namespace mbh_platformer
                     }
                 }
             }
-            
+
             if (new_y.HasValue)
             {
                 self.dy = 0;
@@ -3026,7 +3051,7 @@ namespace mbh_platformer
             if (!hit_roof)
             {
                 foreach (PicoXObj o in objs)
-                { 
+                {
                     sprite v = o as sprite;
                     if (v != null)
                     {
@@ -3124,7 +3149,7 @@ namespace mbh_platformer
 
                 if (time_remaining <= 0)
                 {
-                    inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851});
+                    inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851 });
                     inst.objs_remove_queue.Add(this);
                 }
             }
@@ -3177,7 +3202,7 @@ namespace mbh_platformer
 
             public gem_pickup(int id)
             {
-                    anims = new Dictionary<string, anim>()
+                anims = new Dictionary<string, anim>()
                     {
                         {
                             "default",
@@ -3215,7 +3240,7 @@ namespace mbh_platformer
 
                     inst.pc.found_gems |= gem_mask;
 
-//                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
+                    //                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
 
                     inst.objs_remove_queue.Add(this);
                     inst.hit_pause.start_pause(hit_pause_manager.pause_reason.gem_picked_up);
@@ -3277,7 +3302,7 @@ namespace mbh_platformer
                                 },
                             };
                 }
-                
+
                 set_anim("default");
 
                 w = 16;
@@ -3305,7 +3330,7 @@ namespace mbh_platformer
 
                     string display_name = "";
 
-                    switch(id)
+                    switch (id)
                     {
                         case artifacts.dash_pack:
                             {
@@ -3327,6 +3352,12 @@ namespace mbh_platformer
                         case artifacts.ground_slam:
                             {
                                 display_name = "ground slam";
+                                break;
+                            }
+
+                        case artifacts.light:
+                            {
+                                display_name = "flash light";
                                 break;
                             }
 
@@ -3386,7 +3417,7 @@ namespace mbh_platformer
                         if (inst.pc.found_gems >= 0xf0)
                         {
                             inst.message = new message_box();
-                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); } );
+                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
                         }
                         else
                         {
@@ -3536,8 +3567,8 @@ namespace mbh_platformer
 
         public hit_pause_manager hit_pause;
 
-        public string current_map   = "Content/raw/map_ow_top.tmx";
-        public string queued_map    = "Content/raw/map_ow_top.tmx";
+        public string current_map = "Content/raw/map_ow_top.tmx";
+        public string queued_map = "Content/raw/map_ow_top.tmx";
         public map_link active_map_link;
 
         public int cur_level_id = 0;
@@ -3673,6 +3704,8 @@ namespace mbh_platformer
                         objs_remove_queue.Clear();
                         objs_add_queue.Clear();
 
+                        cur_map_config = new map_config();
+
                         reloadmap(GetMapString());
 
                         TmxMap TmxMapData = new TmxMap(GetMapString());
@@ -3694,6 +3727,11 @@ namespace mbh_platformer
                         int gem_id = 0;
 
                         cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
+
+                        if (TmxMapData.Properties.ContainsKey("darkness_level"))
+                        {
+                            cur_map_config.darkness_level = int.Parse(TmxMapData.Properties["darkness_level"]);
+                        }
 
                         foreach (var group in TmxMapData.ObjectGroups)
                         {
@@ -3929,7 +3967,7 @@ namespace mbh_platformer
                         };
                         game_cam.jump_to_target();
 
-                        foreach(PicoXObj o in objs)
+                        foreach (PicoXObj o in objs)
                         {
                             sprite s = o as sprite;
                             if (s != null)
@@ -3957,7 +3995,7 @@ namespace mbh_platformer
             Point final_pos = map_pos_to_meta_tile(x, y);
             x = final_pos.X;
             y = final_pos.Y;
-            
+
             int count = 0;
 
             for (int j = 0; j <= 1; j++)
@@ -3974,6 +4012,95 @@ namespace mbh_platformer
         {
             change_meta_tile(x, y, new int[] { tile_id, tile_id, tile_id, tile_id });
         }
+
+        public int[] default_pal = new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        public int[][] fade_table =
+        {
+            new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, // brightest
+            new int[] { 0, 1, 2, 3, 4, 0, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15 },
+            new int[] { 0, 1, 2, 3, 4, 0, 0, 5, 8, 9, 10, 11, 12, 13, 14, 15 },
+            new int[] { 0, 1, 2, 3, 4, 0, 0, 0, 8, 9, 10, 11, 12, 13, 14, 15 }, // darkest
+        };
+        // blue tint
+        public int[] default_pal_invert_fg = new int[] { 0, 1, 2, 3, 4, 13, 12, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        // red tint
+        public int[] default_pal_invert_bg = new int[] { 2, 1, 2, 3, 4, 8, 9, 10, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+        public int[] get_cur_pal(bool is_fg)
+        {
+            int fade_darkness_level = 0;
+            switch (cur_game_state)
+            {
+                case game_state.level_trans_exit:
+                    {
+                        int fade_step_time = level_trans_time / 3;
+                        if (time_in_state < 0)
+                        {
+
+                        }
+                        else if (time_in_state < fade_step_time)
+                        {
+                            fade_darkness_level = 1;
+                        }
+                        else if (time_in_state < fade_step_time * 2)
+                        {
+                            fade_darkness_level = 2;
+                        }
+                        else
+                        {
+                            fade_darkness_level = 3;
+                        }
+                        break;
+                    }
+                case game_state.level_trans_enter:
+                    {
+                        int fade_step_time = level_trans_time / 3;
+                        if (time_in_state < fade_step_time)
+                        {
+                            fade_darkness_level = 3;
+                        }
+                        else if (time_in_state < fade_step_time * 2)
+                        {
+                            fade_darkness_level = 2;
+                        }
+                        else
+                        {
+                            fade_darkness_level = 1;
+                        }
+                        break;
+                    }
+            }
+
+            int map_darkness_level = 0;
+            if (!pc.has_artifact(artifacts.light))
+            {
+                map_darkness_level = cur_map_config.darkness_level;
+            }
+
+            if (map_darkness_level > 0 || fade_darkness_level > 0)
+            {
+                return fade_table[(int)max(map_darkness_level, fade_darkness_level)];
+            }
+            else
+            {
+                return default_pal;
+            }
+        }
+
+        public void apply_pal(int[] p)
+        {
+            for (int i = 0; i <= 15; i++)
+            {
+                pal(i, p[i]);
+            }
+        }
+
+        public class map_config
+        {
+            public int darkness_level = 0;
+        }
+
+        public map_config cur_map_config = new map_config();
 
         public override void _init()
         {
@@ -4063,7 +4190,7 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay_dead:
                     {
-                        if (time_in_state >= 240)
+                        if (time_in_state >= 120)
                         {
                             set_game_state(game_state.game_over);
                         }
@@ -4172,66 +4299,6 @@ namespace mbh_platformer
                 camera(0, 0);
             }
 
-            switch(cur_game_state)
-            {
-                case game_state.level_trans_exit:
-                    {
-                        int fade_step_time = level_trans_time / 3;
-                        if (time_in_state < 0)
-                        {
-
-                        }
-                        else if (time_in_state < fade_step_time)
-                        {
-                            pal(7, 6);
-                            pal(6, 5);
-                            pal(5, 0);
-                            pal(0, 0);
-                        }
-                        else if (time_in_state < fade_step_time * 2)
-                        {
-                            pal(7, 5);
-                            pal(6, 0);
-                            pal(5, 0);
-                            pal(0, 0);
-                        }
-                        else
-                        {
-                            pal(7, 0);
-                            pal(6, 0);
-                            pal(5, 0);
-                            pal(0, 0);
-                        }
-                        break;
-                    }
-                case game_state.level_trans_enter:
-                    {
-                        int fade_step_time = level_trans_time / 3;
-                        if (time_in_state < fade_step_time)
-                        {
-                            pal(7, 0);
-                            pal(6, 0);
-                            pal(5, 0);
-                            pal(0, 0);
-                        }
-                        else if (time_in_state < fade_step_time * 2)
-                        {
-                            pal(7, 5);
-                            pal(6, 0);
-                            pal(5, 0);
-                            pal(0, 0);
-                        }
-                        else
-                        {
-                            pal(7, 6);
-                            pal(6, 5);
-                            pal(5, 0);
-                            pal(0, 0);
-                        }
-                        break;
-                    }
-            }
-
             switch (cur_game_state)
             {
                 case game_state.level_trans_exit:
@@ -4243,27 +4310,35 @@ namespace mbh_platformer
                         //pal(6, 5);
                         //pal(5, 6);
                         //pal(0, 7);
+                        apply_pal(get_cur_pal(false));
                         bset(cur_map_bank);
                         map(0, 0, 0, 0, 16, 16);
                         bset(0);
+                        pal();
                         //map(0, 0, 0, 0, 16, 16, 0, 1); // easy mode?
                         //pal();
                         break;
                     }
             }
 
+            
             foreach (PicoXObj o in objs)
             {
+                sprite s = (o as sprite);
+                s.push_pal();
                 o._draw();
+                s.pop_pal();
             }
-
-            pal();
 
             // Draw the player here so that it draws over the fade out during level transition.
-            if (pc.pawn != null)
-            {
-                pc.pawn._draw();
-            }
+            //apply_pal(get_cur_pal(true));
+            //if (pc.pawn != null)
+            //{
+            //    pc.pawn.push_pal();
+            //    pc.pawn._draw();
+            //    pc.pawn.pop_pal();
+            //}
+            //pal();
 
             // HUD
 
@@ -4307,9 +4382,19 @@ namespace mbh_platformer
                             id = 238; // empty
                         }
                     }
+                    apply_pal(get_cur_pal(false));
                     spr(id, y_pos, 1, 2, 2);
+                    pal();
                     y_pos += 16;
                 }
+            };
+
+            Action draw_hud = () =>
+            {
+                //apply_pal(get_cur_pal(false));
+                rectfill(0, 0, Res.X, 15, 7);
+                draw_health();
+                //pal();
             };
 
             camera(0, 0);
@@ -4328,117 +4413,48 @@ namespace mbh_platformer
                     }
                 case game_state.gameplay:
                     {
-                        rectfill(0, 0, Res.X, 15, 7);
-                        draw_health();
-
-                        //if (time_in_state < 15)
-                        //{
-                        //    pal(7, 5, 1);
-                        //    pal(6, 0, 1);
-                        //    pal(5, 0, 1);
-                        //    pal(0, 0, 1);
-                        //}
-                        //else if (time_in_state < 30)
-                        //{
-                        //    pal(7, 6, 1);
-                        //    pal(6, 5, 1);
-                        //    pal(5, 0, 1);
-                        //    pal(0, 0, 1);
-                        //}
-                        /*
-                        int length = 4 * 60;
-                        int time_loop = (int)time_in_state % length;
-                        int fade_step = 5;
-
-                        if (time_loop < fade_step)
-                        {
-                            pal(5, 0, 1);
-                            pal(6, 0, 1);
-                            pal(7, 0, 1);
-                        }
-                        else if (time_loop < fade_step * 2)
-                        {
-                            pal(5, 0, 1);
-                            pal(6, 0, 1);
-                            pal(7, 5, 1);
-                        }
-                        else if (time_loop < fade_step * 3)
-                        {
-                            pal(5, 0, 1);
-                            pal(6, 5, 1);
-                            pal(7, 6, 1);
-                        }
-                        //else if (time_loop > length - fade_step)
-                        //{
-                        //    pal(5, 0, 1);
-                        //    pal(6, 0, 1);
-                        //    pal(7, 0, 1);
-                        //}
-                        else if (time_loop > length - fade_step * 1)
-                        {
-                            pal(5, 0, 1);
-                            pal(6, 0, 1);
-                            pal(7, 5, 1);
-                        }
-                        else if (time_loop > length - fade_step * 2)
-                        {
-                            pal(5, 0, 1);
-                            pal(6, 5, 1);
-                            pal(7, 6, 1);
-                        }
-                        */
+                        draw_hud();
                         break;
                     }
                 case game_state.level_trans_exit:
                 case game_state.level_trans_enter:
                     {
-                        rectfill(0, 0, Res.X, 16, 7);
-                        draw_health();
+                        draw_hud();
                         break;
                     }
                 case game_state.gameplay_dead:
                     {
-                        rectfill(0, 0, Res.X, 16, 7);
-                        draw_health();
-
-                        step = flr((time_in_state / 240.0f) * 32.0f);
-                        if (time_in_state < 120)
+                        const int initial_delay = 60;
+                        const int ticks_per_step = 20;
+                        draw_hud();
+                        if (time_in_state < initial_delay)
                         {
-
+                            apply_pal(fade_table[0]);
                         }
-                        else if (time_in_state < 150)
+                        else if (time_in_state < initial_delay + ticks_per_step)
                         {
-                            pal(7, 6, 1);
-                            pal(6, 5, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
+                            apply_pal(fade_table[1]);
                         }
-                        else if (time_in_state < 180)
+                        else if (time_in_state < initial_delay + ticks_per_step * 2)
                         {
-                            pal(7, 5, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
+                            apply_pal(fade_table[2]);
                         }
                         else
                         {
-                            pal(7, 0, 1);
-                            pal(6, 0, 1);
-                            pal(5, 0, 1);
-                            pal(0, 0, 1);
+                            apply_pal(fade_table[3]);
                         }
                         break;
                     }
                 case game_state.game_over:
                     {
                         var str = "game over";
-                        print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
+                        print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, (Res.Y *0.5f), 7);
                         break;
                     }
                 case game_state.game_win:
                     {
                         var str = "you win! the galaxy is at peace";
-                        print(str, 128 - (str.Length * 0.5f) * 4, 120, 7);
+                        print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, (Res.Y * 0.5f), 7);
                         break;
                     }
             }

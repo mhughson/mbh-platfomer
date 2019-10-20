@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.5" orientation="orthogonal" renderorder="right-down" width="512" height="512" tilewidth="8" tileheight="8" infinite="0" nextlayerid="3" nextobjectid="14">
+<map version="1.2" tiledversion="1.2.5" orientation="orthogonal" renderorder="right-down" width="512" height="512" tilewidth="8" tileheight="8" infinite="0" nextlayerid="3" nextobjectid="16">
  <properties>
   <property name="level_id" type="int" value="-1"/>
  </properties>
@@ -534,7 +534,7 @@
     <property name="dest_spawn_name" value="top_left"/>
    </properties>
   </object>
-  <object id="9" name="alpha_exit_top_left" type="spawn_point" x="1952" y="1584" width="16" height="16">
+  <object id="9" name="alpha_exit_top_left" type="spawn_point" x="1920" y="1584" width="16" height="16">
    <properties>
     <property name="type" value="top"/>
    </properties>
@@ -559,6 +559,17 @@
    <properties>
     <property name="dest_map_path" value="Content/raw/map_ss_beta_00.tmx"/>
     <property name="dest_spawn_name" value="bottom_left"/>
+   </properties>
+  </object>
+  <object id="14" type="map_link" x="2064" y="2096" width="16" height="16">
+   <properties>
+    <property name="dest_map_path" value="Content/raw/map_ss_chi_00.tmx"/>
+    <property name="dest_spawn_name" value="top_left"/>
+   </properties>
+  </object>
+  <object id="15" name="chi_exit_top_left" type="spawn_point" x="2048" y="2096" width="16" height="16">
+   <properties>
+    <property name="type" value="top"/>
    </properties>
   </object>
  </objectgroup>
