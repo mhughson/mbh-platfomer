@@ -34,6 +34,9 @@
 #begin raw/map_ss_chi_00.tmx
 /copy:raw/map_ss_chi_00.tmx
 
+#begin raw/map_ss_chi_01.tmx
+/copy:raw/map_ss_chi_01.tmx
+
 #begin raw/map_ss_horz_template.tmx
 /copy:raw/map_ss_horz_template.tmx
 
