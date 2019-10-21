@@ -7,6 +7,7 @@ using System;
 using TiledSharp;
 using System.IO;
 using System.Linq;
+using Mono8;
 
 namespace mbh_platformer
 {
@@ -1502,8 +1503,10 @@ namespace mbh_platformer
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(448, 2, 2),
-                                create_anim_frame(480, 2, 2),
+                                create_anim_frame(576, 2, 2),
+                                create_anim_frame(578, 2, 2),
+                                //create_anim_frame(580, 2, 2),
+                                //create_anim_frame(578, 2, 2),
                             }
                         }
                     },
@@ -1516,8 +1519,10 @@ namespace mbh_platformer
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(450, 2, 2),
-                                create_anim_frame(482, 2, 2),
+                                create_anim_frame(672, 2, 2),
+                                create_anim_frame(674, 2, 2),
+                                //create_anim_frame(676, 2, 2),
+                                //create_anim_frame(674, 2, 2),
                             }
                         }
                     },
@@ -1530,8 +1535,10 @@ namespace mbh_platformer
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(452, 2, 2),
-                                create_anim_frame(484, 2, 2),
+                                create_anim_frame(640, 2, 2),
+                                create_anim_frame(642, 2, 2),
+                                //create_anim_frame(644, 2, 2),
+                                //create_anim_frame(642, 2, 2),
                             }
                         }
                     },
@@ -1544,20 +1551,91 @@ namespace mbh_platformer
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(454, 2, 2),
-                                create_anim_frame(486, 2, 2),
+                                create_anim_frame(608, 2, 2),
+                                create_anim_frame(610, 2, 2),
+                                //create_anim_frame(612, 2, 2),
+                                //create_anim_frame(610, 2, 2),
+                            }
+                        }
+                    },
+
+                    {
+                        "idle_down",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=60,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                //create_anim_frame(576, 2, 2),
+                                //create_anim_frame(578, 2, 2),
+                                create_anim_frame(580, 2, 2),
+                                create_anim_frame(582, 2, 2),
+                            }
+                        }
+                    },
+                    {
+                        "idle_left",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=60,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                //create_anim_frame(672, 2, 2),
+                                //create_anim_frame(674, 2, 2),
+                                create_anim_frame(676, 2, 2),
+                                create_anim_frame(678, 2, 2),
+                            }
+                        }
+                    },
+                    {
+                        "idle_up",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=60,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                //create_anim_frame(640, 2, 2),
+                                //create_anim_frame(642, 2, 2),
+                                create_anim_frame(644, 2, 2),
+                                create_anim_frame(646, 2, 2),
+                                //create_anim_frame(648, 2, 2),
+                            }
+                        }
+                    },
+                    {
+                        "idle_right",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=60,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                //create_anim_frame(608, 2, 2),
+                                //create_anim_frame(610, 2, 2),
+                                create_anim_frame(612, 2, 2),
+                                create_anim_frame(614, 2, 2),
+                                //create_anim_frame(616, 2, 2),
                             }
                         }
                     },
                 };
 
-                set_anim("walk_down");
+                set_anim("idle_down");
 
                 w = 16;
                 h = 16;
 
                 event_on_anim_done = null;
             }
+
+            string next_idle = "down";
 
             public override void _update60()
             {
@@ -1580,10 +1658,12 @@ namespace mbh_platformer
                     if (dir > 0)
                     {
                         set_anim("walk_right");
+                        next_idle = "right";
                     }
                     else
                     {
                         set_anim("walk_left");
+                        next_idle = "left";
                     }
                 }
                 if (dest_y != y)
@@ -1594,44 +1674,26 @@ namespace mbh_platformer
                     if (dir > 0)
                     {
                         set_anim("walk_down");
+                        next_idle = "down";
                     }
                     else
                     {
                         set_anim("walk_up");
+                        next_idle = "up";
                     }
+                }
+
+                if (dest_x == x & dest_y == y && !btn(0) && !btn(1) && !btn(2) && !btn(3))
+                {
+                    set_anim("idle_" + next_idle);
                 }
 
 
                 const float tile_size = 16;
-                //Vector2 dest = new Vector2(dest_x, dest_y);
-
-                //if (btnp(0) && desired_dir != -Vector2.UnitX && !fget(mget(flr(dest.X/8 - 2), flr(dest_y/8)), 0))
-                //{
-                //    desired_dir = -Vector2.UnitX;
-                //}
-                //else if (btnp(1) && desired_dir != Vector2.UnitX && !fget(mget(flr(dest.X/8 + 2), flr(dest_y/8)), 0))
-                //{
-                //    desired_dir = Vector2.UnitX;
-                //}
-                //else if (btnp(2) && desired_dir != -Vector2.UnitY && !fget(mget(flr(dest.X/8), flr(dest_y/8 - 2)), 0))
-                //{
-                //    desired_dir = -Vector2.UnitY;
-                //}
-                //else if (btnp(3) && desired_dir != Vector2.UnitY && !fget(mget(flr(dest.X/8), flr(dest_y/8 + 2)), 0))
-                //{
-                //    desired_dir = Vector2.UnitY;
-                //}
-                //else if (!btn(0) && !btn(1) && !btn(2) && !btn(3))
-                //{
-                //    desired_dir = Vector2.Zero;
-                //}
 
                 // Arrived at tile.
                 if (dest_x == x && dest_y == y)
                 {
-                    //dest_x += desired_dir.X * tile_size;
-                    //dest_y += desired_dir.Y * tile_size;
-
                     bool new_dest = false;
 
                     if (btn(0) && !new_dest)
@@ -4095,6 +4157,52 @@ namespace mbh_platformer
             }
         }
 
+        List<Tuple<string /*label*/, string/*value*/>> populate_map_list()
+        {
+            string targetDirectory = Directory.GetCurrentDirectory() + "/Content/raw/";
+
+            // Process the list of files found in the directory.
+            string[] map_file_list = Directory.GetFiles(targetDirectory, "*.tmx");
+
+            List<Tuple<string /*label*/, string/*value*/>> data_set = new List<Tuple<string, string>>();
+            int count = 1;
+            foreach (string s in map_file_list)
+            {
+                string file = Path.GetFileName(s);
+                if (file.StartsWith("map_"))
+                {
+                    data_set.Add(new Tuple<string, string>(file + " (" + count++ + "/" + map_file_list.Length + ")", "Content/raw/" + file));
+                    printh("Add: " + file);
+                }
+                else
+                {
+                    printh("Ignore: " + file);
+                }
+            }
+
+            return data_set;
+        }
+
+        public void printo(string str, float startx, float starty, int col, int col_bg)
+        {
+            print(str, startx + 1, starty, col_bg);
+            print(str, startx - 1, starty, col_bg);
+            print(str, startx, starty + 1, col_bg);
+            print(str, startx, starty - 1, col_bg);
+            print(str, startx + 1, starty - 1, col_bg);
+            print(str, startx - 1, starty - 1, col_bg);
+            print(str, startx - 1, starty + 1, col_bg);
+            print(str, startx + 1, starty + 1, col_bg);
+            print(str, startx, starty, col);
+        }
+
+
+        List<Tuple<string /*label*/, string/*value*/>> debug_map_list;
+        int cur_debug_map = -1;
+
+        BufferedKey next_level_key = new BufferedKey(Keys.PageDown);
+        BufferedKey prev_level_key = new BufferedKey(Keys.PageUp);
+
         public class map_config
         {
             public int darkness_level = 0;
@@ -4104,6 +4212,8 @@ namespace mbh_platformer
 
         public override void _init()
         {
+            debug_map_list = populate_map_list();
+
             // Create save file.
             cartdata("mbh-platformer");
 
@@ -4186,6 +4296,28 @@ namespace mbh_platformer
                         //{
                         //    game_cam.shake((int)rnd(30) + 30, 1);
                         //}
+
+                        if (next_level_key.Update())
+                        {
+                            int index = debug_map_list.FindIndex((Tuple<string,string> param) => { return (param.Item2 == current_map); });
+                            if (index >= 0)
+                            {
+                                cur_debug_map = (index + 1) % debug_map_list.Count;
+                                queued_map = debug_map_list[cur_debug_map].Item2;
+                                printh("queued: " + queued_map);
+                            }
+                        }
+                        if (prev_level_key.Update())
+                        {
+                            int index = debug_map_list.FindIndex((Tuple<string, string> param) => { return (param.Item2 == current_map); });
+                            if (index >= 0)
+                            {
+                                cur_debug_map = ((index - 1) + debug_map_list.Count) % debug_map_list.Count;
+                                queued_map = debug_map_list[cur_debug_map].Item2;
+                                printh("queued: " + queued_map);
+                            }
+                        }
+
                         break;
                     }
                 case game_state.gameplay_dead:
@@ -4414,6 +4546,10 @@ namespace mbh_platformer
                 case game_state.gameplay:
                     {
                         draw_hud();
+                        if (time_in_state < 500)
+                        {
+                            printo(Path.GetFileNameWithoutExtension(current_map).ToLower(), 1, Res.Y - 12, 7, 0);
+                        }
                         break;
                     }
                 case game_state.level_trans_exit:
