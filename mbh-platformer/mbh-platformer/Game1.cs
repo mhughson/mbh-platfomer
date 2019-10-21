@@ -2654,9 +2654,15 @@ namespace mbh_platformer
 
             public override void push_pal()
             {
-                // don't call super.
-                //base.push_pal();
-                inst.apply_pal(inst.default_pal);
+                if (inst.active_map_link?.trans_dir != map_link.transition_dir.none)
+                {
+                    // don't call super.
+                    inst.apply_pal(inst.default_pal);
+                }
+                else
+                {
+                    base.push_pal();
+                }
             }
 
             public override void _draw()
@@ -4406,20 +4412,35 @@ namespace mbh_platformer
                         float amount = (float)(time) / (float)(level_trans_time);
                         if (active_map_link.trans_dir == map_link.transition_dir.horz)
                         {
-                            amount *= Res.X;
-                            if (pc.pawn.x < game_cam.cam_pos().X + Res.X * 0.5f)
-                            {
-                                amount *= -1.0f;
-                            }
+                            float cam_x = game_cam.cam_pos().X + Res.X * 0.5f;
+                            amount *= (pc.pawn.cx - cam_x);
                             offset.X += amount;
                         }
                         else
                         {
-                            amount *= Res.Y;
-                            if (pc.pawn.y < game_cam.cam_pos().Y + Res.Y * 0.5f)
-                            {
-                                amount *= -1.0f;
-                            }
+                            float cam_y = game_cam.cam_pos().Y + Res.Y * 0.5f;
+                            amount *= (pc.pawn.cy - cam_y);
+                            offset.Y += amount;
+                        }
+                    }
+                }
+
+                if (active_map_link != null && active_map_link.trans_dir != map_link.transition_dir.none)
+                {
+                    if (cur_game_state == game_state.level_trans_enter)// && time_in_state > level_trans_time)
+                    {
+                        float time = time_in_state;// - level_trans_time;
+                        float amount = 1 - ((float)(time) / (float)(level_trans_time));
+                        if (active_map_link.trans_dir == map_link.transition_dir.horz)
+                        {
+                            float cam_x = game_cam.cam_pos().X + Res.X * 0.5f;
+                            amount *= (pc.pawn.cx - cam_x);
+                            offset.X += amount;
+                        }
+                        else
+                        {
+                            float cam_y = game_cam.cam_pos().Y + Res.Y * 0.5f;
+                            amount *= (pc.pawn.cy - cam_y);
                             offset.Y += amount;
                         }
                     }

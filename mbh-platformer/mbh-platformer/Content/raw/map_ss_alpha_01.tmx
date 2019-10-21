@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.5" orientation="orthogonal" renderorder="right-down" width="32" height="30" tilewidth="8" tileheight="8" infinite="0" nextlayerid="5" nextobjectid="9">
+<map version="1.2" tiledversion="1.2.5" orientation="orthogonal" renderorder="right-down" width="32" height="30" tilewidth="8" tileheight="8" infinite="0" nextlayerid="7" nextobjectid="9">
  <properties>
   <property name="level_id" type="int" value="-1"/>
  </properties>
  <tileset firstgid="1" source="platformer_sheet_1.tsx"/>
- <layer id="4" name="Tile Layer 1" width="32" height="30">
+ <layer id="6" name="Tile Layer 1" width="32" height="30">
   <data encoding="csv">
 3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,3,4,
 19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,
