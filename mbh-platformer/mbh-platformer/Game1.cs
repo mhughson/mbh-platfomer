@@ -4175,7 +4175,7 @@ namespace mbh_platformer
             foreach (string s in map_file_list)
             {
                 string file = Path.GetFileName(s);
-                if (file.StartsWith("map_"))
+                if (file.StartsWith("map_") && !file.Contains("template"))
                 {
                     data_set.Add(new Tuple<string, string>(file + " (" + count++ + "/" + map_file_list.Length + ")", "Content/raw/" + file));
                     printh("Add: " + file);

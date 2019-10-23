@@ -31,6 +31,16 @@
    <property name="Flag" type="int" value="2"/>
   </properties>
  </tile>
+ <tile id="14">
+  <properties>
+   <property name="Flag" type="int" value="33"/>
+  </properties>
+ </tile>
+ <tile id="15">
+  <properties>
+   <property name="Flag" type="int" value="33"/>
+  </properties>
+ </tile>
  <tile id="22">
   <properties>
    <property name="Flag" type="int" value="1"/>
@@ -49,6 +59,16 @@
  <tile id="29">
   <properties>
    <property name="Flag" type="int" value="2"/>
+  </properties>
+ </tile>
+ <tile id="30">
+  <properties>
+   <property name="Flag" type="int" value="33"/>
+  </properties>
+ </tile>
+ <tile id="31">
+  <properties>
+   <property name="Flag" type="int" value="33"/>
   </properties>
  </tile>
 </tileset>
