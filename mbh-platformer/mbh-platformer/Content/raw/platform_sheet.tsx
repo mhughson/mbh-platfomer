@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.2.4" name="platform_sheet" tilewidth="8" tileheight="8" tilecount="1024" columns="16">
+<tileset version="1.2" tiledversion="1.2.5" name="platform_sheet" tilewidth="8" tileheight="8" tilecount="1024" columns="16">
  <image source="platformer_sheet.png" trans="000000" width="128" height="512"/>
  <tile id="834">
   <properties>
@@ -13,22 +13,22 @@
  </tile>
  <tile id="840">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="841">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="842">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="843">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="850">
@@ -43,52 +43,52 @@
  </tile>
  <tile id="856">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="857">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="858">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="859">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="864">
   <properties>
-   <property name="Flag" type="int" value="64"/>
+   <property name="Flag" type="int" value="12"/>
   </properties>
  </tile>
  <tile id="865">
   <properties>
-   <property name="Flag" type="int" value="64"/>
+   <property name="Flag" type="int" value="12"/>
   </properties>
  </tile>
  <tile id="868">
   <properties>
-   <property name="Flag" type="int" value="9"/>
+   <property name="Flag" type="int" value="7"/>
   </properties>
  </tile>
  <tile id="869">
   <properties>
-   <property name="Flag" type="int" value="9"/>
+   <property name="Flag" type="int" value="7"/>
   </properties>
  </tile>
  <tile id="884">
   <properties>
-   <property name="Flag" type="int" value="9"/>
+   <property name="Flag" type="int" value="7"/>
   </properties>
  </tile>
  <tile id="885">
   <properties>
-   <property name="Flag" type="int" value="9"/>
+   <property name="Flag" type="int" value="7"/>
   </properties>
  </tile>
  <tile id="896">
@@ -153,22 +153,22 @@
  </tile>
  <tile id="970">
   <properties>
-   <property name="Flag" type="int" value="16"/>
+   <property name="Flag" type="int" value="8"/>
   </properties>
  </tile>
  <tile id="971">
   <properties>
-   <property name="Flag" type="int" value="16"/>
+   <property name="Flag" type="int" value="8"/>
   </properties>
  </tile>
  <tile id="986">
   <properties>
-   <property name="Flag" type="int" value="16"/>
+   <property name="Flag" type="int" value="8"/>
   </properties>
  </tile>
  <tile id="987">
   <properties>
-   <property name="Flag" type="int" value="16"/>
+   <property name="Flag" type="int" value="8"/>
   </properties>
  </tile>
  <tile id="992">

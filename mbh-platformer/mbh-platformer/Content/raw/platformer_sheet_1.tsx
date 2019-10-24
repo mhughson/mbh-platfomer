@@ -13,12 +13,12 @@
  </tile>
  <tile id="10">
   <properties>
-   <property name="Flag" type="int" value="64"/>
+   <property name="Flag" type="int" value="12"/>
   </properties>
  </tile>
  <tile id="11">
   <properties>
-   <property name="Flag" type="int" value="64"/>
+   <property name="Flag" type="int" value="12"/>
   </properties>
  </tile>
  <tile id="12">
@@ -33,12 +33,12 @@
  </tile>
  <tile id="14">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="15">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="22">
@@ -63,12 +63,12 @@
  </tile>
  <tile id="30">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
  <tile id="31">
   <properties>
-   <property name="Flag" type="int" value="33"/>
+   <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
 </tileset>

@@ -1862,6 +1862,33 @@ namespace mbh_platformer
             // Alien relics
         }
 
+        // A list of mututially exclusive tile flags. Because they are mutually exclusive we have
+        // have overlay between their bits.
+        public enum packed_tile_types
+        {
+            spike = 1,
+            vanishing = 2,
+            arc = 3,
+            water = 4,
+            rock_smash = 5,
+            pass_through = 6,
+        }
+
+        // Returns a packed_tile_types id.
+        public int unpack_tile_flags(int tile_flags)
+        {
+            // get the raw tile flags.
+            // shift 1 to the left to eliminate the first bit ("wall").
+            // Isolate the next 4 bits (note: currently only using 3) which
+            // contain the packed tile id.
+            return (tile_flags >> 1) & 0xff;
+        }
+
+        public bool is_packed_tile(int tile_flags, packed_tile_types type)
+        {
+            return unpack_tile_flags(tile_flags) == (int)type;
+        }
+
         public class player_pawn : sprite
         {
             protected player_controller controller;
@@ -2087,18 +2114,18 @@ namespace mbh_platformer
 
                 int mx = flr(hit_point.X / 8.0f);
                 int my = flr(hit_point.Y / 8.0f);
-                if (fget(mget(mx, my), 2))
+                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.vanishing))
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
                 }
-                if (fget(mget(mx, my), 3))
+                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.arc))
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
                     inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
-                if (fget(mget(mx, my), 5) && inst.pc.has_artifact(artifacts.rock_smasher))
+                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.rock_smash) && inst.pc.has_artifact(artifacts.rock_smasher))
                 {
                     var grid_pos = inst.map_pos_to_meta_tile(mx, my);
 
@@ -2322,7 +2349,7 @@ namespace mbh_platformer
                 //jump buttons
                 self.jump_button._update60();
 
-                bool in_water_new = (fget(mget(flr(x / 8), flr(y / 8)), 4));
+                bool in_water_new = (inst.is_packed_tile(fget(mget(flr(x / 8), flr(y / 8))), packed_tile_types.water));
 
                 if (!in_water && in_water_new)
                 {
@@ -2379,7 +2406,7 @@ namespace mbh_platformer
                         else if ((on_ground && new_jump_btn && jump_count == 0))
                         {
                             // Are we jumping off a pass through floor with "down" held?
-                            if ((grounded & (1 << 6)) != 0 && btn(3))
+                            if (inst.is_packed_tile(grounded, packed_tile_types.pass_through) && btn(3))
                             {
                                 // Teleport below the floor to avoid collision.
                                 y += 8;
@@ -2509,7 +2536,7 @@ namespace mbh_platformer
                 {
                     int cell_x = flr(((cx + h.Item1) / 8));
                     int cell_y = flr(((cy + h.Item2) / 8));
-                    if (fget(mget(cell_x, cell_y), 1))
+                    if (inst.is_packed_tile(fget(mget(cell_x, cell_y)), packed_tile_types.spike))
                     {
                         // placeholder to do massive damage.
                         sprite temp = new sprite()
@@ -3025,7 +3052,7 @@ namespace mbh_platformer
                 var y = flr((box_y + box_h_half) / 8);
                 var y_actual = flr((self.y + box_h_half) / 8);
                 byte tile_flag = fget(mget(flr((box_x + i) / 8), y));
-                if ((tile_flag & (1 << 0 | 1 << 6)) != 0)
+                if ((tile_flag & 1) << 0 != 0 || is_packed_tile(tile_flag, packed_tile_types.pass_through))
                 {
                     new_y = (flr(y) * 8) - box_h_half + (self.y - self.cy);
                     collision_flag = tile_flag;
@@ -4477,10 +4504,12 @@ namespace mbh_platformer
             
             foreach (PicoXObj o in objs)
             {
-                sprite s = (o as sprite);
-                s.push_pal();
-                o._draw();
-                s.pop_pal();
+                if (o is sprite)
+                {
+                    (o as sprite).push_pal();
+                    o._draw();
+                    (o as sprite).pop_pal();
+                }
             }
 
             // Draw the player here so that it draws over the fade out during level transition.
