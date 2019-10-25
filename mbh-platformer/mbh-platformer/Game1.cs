@@ -3667,6 +3667,7 @@ namespace mbh_platformer
 
         game_state cur_game_state;
         uint time_in_state;
+        // TODO: why am I not just using the BufferedKey?
         complex_button start_game;
         int cur_map_bank = 0;
 
@@ -3740,6 +3741,279 @@ namespace mbh_platformer
             inst = this;
         }
 
+        public void initialize_map(ref Vector2 spawn_point, bool debug_hot_reload)
+        {
+            current_map = queued_map;
+
+            Vector2 cam_area_min = Vector2.Zero;
+            Vector2 cam_area_max = Vector2.Zero;
+
+            objs.Clear();
+            objs_remove_queue.Clear();
+            objs_add_queue.Clear();
+
+            cur_map_config = new map_config();
+
+            reloadmap(GetMapString());
+
+            TmxMap TmxMapData = new TmxMap(GetMapString());
+
+            // Figure out what bank this map uses.
+            // NOTE: For now we assume that each map uses only 1 bank.
+            for (int i = 0; i < GetSheetPath().Count; i++)
+            {
+                string file_name = Path.GetFileNameWithoutExtension((TmxMapData.Tilesets[0]).Image.Source);
+                if (GetSheetPath()[i].EndsWith(file_name))
+                {
+                    cur_map_bank = i;
+                    break;
+                }
+            }
+
+            player_pawn pawn = null;
+
+            int gem_id = 0;
+
+            cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
+
+            if (TmxMapData.Properties.ContainsKey("darkness_level"))
+            {
+                cur_map_config.darkness_level = int.Parse(TmxMapData.Properties["darkness_level"]);
+            }
+
+            foreach (var group in TmxMapData.ObjectGroups)
+            {
+                foreach (var o in group.Objects)
+                {
+                    if (string.Compare(o.Type, "spawn_point", true) == 0 && !debug_hot_reload)
+                    {
+                        if (!string.IsNullOrEmpty(active_map_link?.dest_spawn_name))
+                        {
+                            if (active_map_link.dest_spawn_name != o.Name)
+                            {
+                                continue;
+                            }
+                        }
+                        // Account for the case of a checkpoint.
+                        if (spawn_point == Vector2.Zero)
+                        {
+                            spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
+                        }
+
+                        // mandatory field.
+                        switch (o.Properties["type"])
+                        {
+                            case "top":
+                                {
+                                    pawn = new player_top()
+                                    {
+                                        x = spawn_point.X,
+                                        y = spawn_point.Y,
+                                        w = 16,
+                                        h = 16,
+                                        cw = 16,
+                                        ch = 16,
+                                    };
+                                    (pawn as player_top).dest_x = pawn.x;
+                                    (pawn as player_top).dest_y = pawn.y;
+
+                                    break;
+                                }
+
+                            case "side":
+                                {
+                                    pawn = new player_side()
+                                    {
+                                        x = spawn_point.X,
+                                        y = spawn_point.Y,
+                                    };
+                                    break;
+                                }
+                        }
+                    }
+                    else if (string.Compare(o.Type, "cam_area", true) == 0)
+                    {
+                        cam_area_min = new Vector2((float)o.X, (float)o.Y);
+                        cam_area_max = new Vector2((float)o.X + (float)o.Width, (float)o.Y + (float)o.Height);
+                    }
+                    else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
+                    {
+                        objs_add_queue.Add(
+                                new chopper()
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                }
+                            );
+                    }
+                    else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
+                    {
+                        objs_add_queue.Add(
+                                new lava_blaster(Int32.Parse(o.Properties["dir"]))
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                }
+                            );
+                    }
+                    else if (string.Compare(o.Type, "spawn_steam_spawner", true) == 0)
+                    {
+                        objs_add_queue.Add(
+                                new steam_spawner()
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                }
+                            );
+                    }
+                    else if (string.Compare(o.Type, "spawn_rolley", true) == 0)
+                    {
+                        objs_add_queue.Add(
+                                new badguy(Int32.Parse(o.Properties["dir"]))
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                }
+                            );
+                    }
+                    else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
+                    {
+                        objs_add_queue.Add(
+                                new rocket_ship()
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                }
+                            );
+                    }
+                    else if (string.Compare(o.Type, "spawn_checkpoint", true) == 0)
+                    {
+                        objs_add_queue.Add(
+                                new checkpoint()
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                }
+                            );
+                    }
+                    else if (string.Compare(o.Type, "map_link", true) == 0)
+                    {
+                        map_link ml = new map_link()
+                        {
+                            x = (float)o.X + ((float)o.Width * 0.5f),
+                            y = (float)o.Y + ((float)o.Height * 0.5f),
+                            w = (int)o.Width,
+                            h = (int)o.Height,
+                        };
+                        ml.cw = ml.w;
+                        ml.ch = ml.h;
+
+                        string out_string;
+                        if (o.Properties.TryGetValue("dest_map_path", out out_string))
+                        {
+                            ml.dest_map_path = out_string;
+                        }
+                        if (o.Properties.TryGetValue("dest_spawn_name", out out_string))
+                        {
+                            ml.dest_spawn_name = out_string;
+                        }
+                        if (o.Properties.TryGetValue("dir", out out_string))
+                        {
+                            ml.trans_dir = (map_link.transition_dir)Enum.Parse(typeof(map_link.transition_dir), out_string);
+                        }
+
+                        objs_add_queue.Add(ml);
+                    }
+                    else if (string.Compare(o.Type, "artifact", true) == 0)
+                    {
+                        artifacts t = (artifacts)Enum.Parse(typeof(artifacts), o.Properties["id"]);
+
+                        // Has the player already found this?
+                        if ((pc.found_artifacts & t) == 0)
+                        {
+                            artifact_pickup ap = new artifact_pickup(t)
+                            {
+                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                            };
+
+                            objs_add_queue.Add(ap);
+                        }
+                    }
+                    else if (string.Compare(o.Type, "gem", true) == 0)
+                    {
+                        System.Diagnostics.Debug.Assert(cur_level_id >= 0);
+                        System.Diagnostics.Debug.Assert(gem_id < gems_per_level);
+
+                        // Max of 4 gems per level.
+                        if (gem_id < gems_per_level)
+                        {
+                            UInt32 gem_mask = (UInt32)1 << gem_id + (gems_per_level * cur_level_id);
+
+                            if ((inst.pc.found_gems & gem_mask) == 0)
+                            {
+                                gem_pickup gem = new gem_pickup(gem_id)
+                                {
+                                    x = (float)o.X + ((float)o.Width * 0.5f),
+                                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                                };
+
+                                objs_add_queue.Add(gem);
+                            }
+
+                            gem_id++;
+                        }
+                    }
+                }
+            }
+
+            objs_add_queue.Add(pc);
+
+            if (pawn != null)
+            {
+                pc.possess(pawn);
+            }
+
+            const int hud_height = 16;
+
+            // Account for the fact that the camera area can be smaller than the game resolution.
+            // This could be fixed in content by always setting a min cam size of ResX/Y, but this
+            // allows us to change the resolution without having to update content.
+            Vector2 cam_area = cam_area_max - cam_area_min;
+            Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
+
+            // Is the camera area smaller than the resolution? If so, adjust it (while keeping
+            // it centered around the same point) to match the resolution.
+            // NOTE: At time of writing we still render the map outside the camera area.
+            if (cam_area.X < Res.X)
+            {
+                cam_area_min.X -= cam_delta_half.X;
+                cam_area_max.X += cam_delta_half.X;
+            }
+            if (cam_area.Y < Res.Y)
+            {
+                cam_area_min.Y -= cam_delta_half.Y - 8;
+                cam_area_max.Y += cam_delta_half.Y - 8;
+            }
+
+            game_cam = new cam(pc)
+            {
+                pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
+                pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+            };
+            game_cam.jump_to_target();
+
+            foreach (PicoXObj o in objs)
+            {
+                sprite s = o as sprite;
+                if (s != null)
+                {
+                    s.x_initial = s.x;
+                    s.y_initial = s.y;
+                }
+            }
+        }
+
         public void set_game_state(game_state new_state)
         {
             // Used in the case of entering gameplay, both from transitioning maps,
@@ -3800,287 +4074,7 @@ namespace mbh_platformer
                     }
                 case game_state.level_trans_enter:
                     {
-                        current_map = queued_map;
-
-                        Vector2 cam_area_min = Vector2.Zero;
-                        Vector2 cam_area_max = Vector2.Zero;
-
-                        objs.Clear();
-                        objs_remove_queue.Clear();
-                        objs_add_queue.Clear();
-
-                        cur_map_config = new map_config();
-
-                        reloadmap(GetMapString());
-
-                        TmxMap TmxMapData = new TmxMap(GetMapString());
-
-                        // Figure out what bank this map uses.
-                        // NOTE: For now we assume that each map uses only 1 bank.
-                        for (int i = 0; i < GetSheetPath().Count; i++)
-                        {
-                            string file_name = Path.GetFileNameWithoutExtension((TmxMapData.Tilesets[0]).Image.Source);
-                            if (GetSheetPath()[i].EndsWith(file_name))
-                            {
-                                cur_map_bank = i;
-                                break;
-                            }
-                        }
-
-                        player_pawn pawn = null;
-
-                        int gem_id = 0;
-
-                        cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
-
-                        if (TmxMapData.Properties.ContainsKey("darkness_level"))
-                        {
-                            cur_map_config.darkness_level = int.Parse(TmxMapData.Properties["darkness_level"]);
-                        }
-
-                        foreach (var group in TmxMapData.ObjectGroups)
-                        {
-                            foreach (var o in group.Objects)
-                            {
-                                if (string.Compare(o.Type, "spawn_point", true) == 0)
-                                {
-                                    if (!string.IsNullOrEmpty(active_map_link?.dest_spawn_name))
-                                    {
-                                        if (active_map_link.dest_spawn_name != o.Name)
-                                        {
-                                            continue;
-                                        }
-                                    }
-                                    // Account for the case of a checkpoint.
-                                    if (spawn_point == Vector2.Zero)
-                                    {
-                                        spawn_point = new Vector2((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f));
-                                    }
-
-                                    // mandatory field.
-                                    switch (o.Properties["type"])
-                                    {
-                                        case "top":
-                                            {
-                                                pawn = new player_top()
-                                                {
-                                                    x = spawn_point.X,
-                                                    y = spawn_point.Y,
-                                                    w = 16,
-                                                    h = 16,
-                                                    cw = 16,
-                                                    ch = 16,
-                                                };
-                                                (pawn as player_top).dest_x = pawn.x;
-                                                (pawn as player_top).dest_y = pawn.y;
-
-                                                break;
-                                            }
-
-                                        case "side":
-                                            {
-                                                pawn = new player_side()
-                                                {
-                                                    x = spawn_point.X,
-                                                    y = spawn_point.Y,
-                                                };
-                                                break;
-                                            }
-                                    }
-                                }
-                                else if (string.Compare(o.Type, "cam_area", true) == 0)
-                                {
-                                    cam_area_min = new Vector2((float)o.X, (float)o.Y);
-                                    cam_area_max = new Vector2((float)o.X + (float)o.Width, (float)o.Y + (float)o.Height);
-                                }
-                                else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new chopper()
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new lava_blaster(Int32.Parse(o.Properties["dir"]))
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "spawn_steam_spawner", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new steam_spawner()
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "spawn_rolley", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new badguy(Int32.Parse(o.Properties["dir"]))
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new rocket_ship()
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "spawn_checkpoint", true) == 0)
-                                {
-                                    objs_add_queue.Add(
-                                            new checkpoint()
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            }
-                                        );
-                                }
-                                else if (string.Compare(o.Type, "map_link", true) == 0)
-                                {
-                                    map_link ml = new map_link()
-                                    {
-                                        x = (float)o.X + ((float)o.Width * 0.5f),
-                                        y = (float)o.Y + ((float)o.Height * 0.5f),
-                                        w = (int)o.Width,
-                                        h = (int)o.Height,
-                                    };
-                                    ml.cw = ml.w;
-                                    ml.ch = ml.h;
-
-                                    string out_string;
-                                    if (o.Properties.TryGetValue("dest_map_path", out out_string))
-                                    {
-                                        ml.dest_map_path = out_string;
-                                    }
-                                    if (o.Properties.TryGetValue("dest_spawn_name", out out_string))
-                                    {
-                                        ml.dest_spawn_name = out_string;
-                                    }
-                                    if (o.Properties.TryGetValue("dir", out out_string))
-                                    {
-                                        ml.trans_dir = (map_link.transition_dir)Enum.Parse(typeof(map_link.transition_dir), out_string);
-                                    }
-
-                                    objs_add_queue.Add(ml);
-                                }
-                                else if (string.Compare(o.Type, "artifact", true) == 0)
-                                {
-                                    artifacts t = (artifacts)Enum.Parse(typeof(artifacts), o.Properties["id"]);
-
-                                    // Has the player already found this?
-                                    if ((pc.found_artifacts & t) == 0)
-                                    {
-                                        artifact_pickup ap = new artifact_pickup(t)
-                                        {
-                                            x = (float)o.X + ((float)o.Width * 0.5f),
-                                            y = (float)o.Y + ((float)o.Height * 0.5f),
-                                        };
-
-                                        objs_add_queue.Add(ap);
-                                    }
-                                }
-                                else if (string.Compare(o.Type, "gem", true) == 0)
-                                {
-                                    System.Diagnostics.Debug.Assert(cur_level_id >= 0);
-                                    System.Diagnostics.Debug.Assert(gem_id < gems_per_level);
-
-                                    // Max of 4 gems per level.
-                                    if (gem_id < gems_per_level)
-                                    {
-                                        UInt32 gem_mask = (UInt32)1 << gem_id + (gems_per_level * cur_level_id);
-
-                                        if ((inst.pc.found_gems & gem_mask) == 0)
-                                        {
-                                            gem_pickup gem = new gem_pickup(gem_id)
-                                            {
-                                                x = (float)o.X + ((float)o.Width * 0.5f),
-                                                y = (float)o.Y + ((float)o.Height * 0.5f),
-                                            };
-
-                                            objs_add_queue.Add(gem);
-                                        }
-
-                                        gem_id++;
-                                    }
-                                }
-                            }
-                        }
-
-                        //objs_add_queue.Add(new rock() { x = 37 * 8, y = 97 * 8, });
-                        //objs_add_queue.Add(new rock() { x = 37 * 8, y = 89 * 8, });
-                        //objs_add_queue.Add(new rock() { x = 27 * 8, y = 107 * 8, });
-                        //for (int i = 0; i < 10; i++)
-                        //{
-                        //    objs_add_queue.Add(new badguy() { x = 27 * 8 + i * 16, y = 107 * 8 });
-                        //}
-                        //objs_add_queue.Add(new badguy() { x = 19 * 8, y = 97 * 8 });
-                        //objs_add_queue.Add(new chopper() { x = 31 * 8, y = 85 * 8 });
-                        //objs_add_queue.Add(new chopper() { x = 35 * 8, y = 80 * 8 });
-                        //objs_add_queue.Add(new chopper() { x = 39 * 8, y = 75 * 8 });
-                        //objs_add_queue.Add(new chopper() { x = 43 * 8, y = 70 * 8 });
-                        //objs_add_queue.Add(new lava_splash() { x = 19 * 8, y = 97 * 8 });
-                        //objs_add_queue.Add(new lava_blaster(1) { x = 9 * 8, y = 93 * 8 });
-                        //objs_add_queue.Add(new lava_blaster(-1) { x = 40 * 8, y = 48 * 8 });
-                        objs_add_queue.Add(pc);
-
-                        pc.possess(pawn);
-
-                        const int hud_height = 16;
-
-                        // Account for the fact that the camera area can be smaller than the game resolution.
-                        // This could be fixed in content by always setting a min cam size of ResX/Y, but this
-                        // allows us to change the resolution without having to update content.
-                        Vector2 cam_area = cam_area_max - cam_area_min;
-                        Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
-
-                        // Is the camera area smaller than the resolution? If so, adjust it (while keeping
-                        // it centered around the same point) to match the resolution.
-                        // NOTE: At time of writing we still render the map outside the camera area.
-                        if (cam_area.X < Res.X)
-                        {
-                            cam_area_min.X -= cam_delta_half.X;
-                            cam_area_max.X += cam_delta_half.X;
-                        }
-                        if (cam_area.Y < Res.Y)
-                        {
-                            cam_area_min.Y -= cam_delta_half.Y - 8;
-                            cam_area_max.Y += cam_delta_half.Y - 8;
-                        }
-
-                        game_cam = new cam(pc)
-                        {
-                            pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
-                            pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
-                        };
-                        game_cam.jump_to_target();
-
-                        foreach (PicoXObj o in objs)
-                        {
-                            sprite s = o as sprite;
-                            if (s != null)
-                            {
-                                s.x_initial = s.x;
-                                s.y_initial = s.y;
-                            }
-                        }
+                        initialize_map(ref spawn_point, false);
                         break;
                     }
                 default:
@@ -4245,6 +4239,7 @@ namespace mbh_platformer
 
         BufferedKey next_level_key = new BufferedKey(Keys.PageDown);
         BufferedKey prev_level_key = new BufferedKey(Keys.PageUp);
+        BufferedKey ReloadContentButton = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.R});
 
         public class map_config
         {
@@ -4299,6 +4294,12 @@ namespace mbh_platformer
             time_in_state++;
 
             start_game._update60();
+
+            if (ReloadContentButton.Update())
+            {
+                Vector2 spawn_point = Vector2.Zero;
+                initialize_map(ref spawn_point, true);
+            }
 
             switch (cur_game_state)
             {
