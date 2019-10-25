@@ -71,4 +71,24 @@
    <property name="Flag" type="int" value="11"/>
   </properties>
  </tile>
+ <tile id="32">
+  <properties>
+   <property name="Flag" type="int" value="17"/>
+  </properties>
+ </tile>
+ <tile id="33">
+  <properties>
+   <property name="Flag" type="int" value="17"/>
+  </properties>
+ </tile>
+ <tile id="48">
+  <properties>
+   <property name="Flag" type="int" value="17"/>
+  </properties>
+ </tile>
+ <tile id="49">
+  <properties>
+   <property name="Flag" type="int" value="17"/>
+  </properties>
+ </tile>
 </tileset>

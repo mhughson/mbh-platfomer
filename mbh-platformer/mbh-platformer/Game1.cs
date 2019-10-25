@@ -1872,6 +1872,7 @@ namespace mbh_platformer
             water = 4,
             rock_smash = 5,
             pass_through = 6,
+            no_bouce = 8,
         }
 
         // Returns a packed_tile_types id.
@@ -2106,16 +2107,25 @@ namespace mbh_platformer
             {
                 // Clear out the dash direction since we hit a surface of something.
                 dash_dir = Vector2.Zero;
-                dy = -8;
+
                 dx = 5 * -Math.Sign(hit_point.X - cx);
                 dash_time = 0;
-                dash_count = 0;
-                inst.objs_add_queue.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
 
                 int mx = flr(hit_point.X / 8.0f);
                 int my = flr(hit_point.Y / 8.0f);
-                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.vanishing))
+
+                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.no_bouce))
                 {
+                    return;
+                }
+
+                // Only do this stuff when bouncing up.
+                dash_count = 0;
+                dy = -8;
+                inst.objs_add_queue.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
+
+                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.vanishing))
+                { 
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
                 }
