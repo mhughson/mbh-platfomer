@@ -1700,7 +1700,7 @@ namespace mbh_platformer
                     {
                         dest_x -= tile_size;
                         // Are we trying to walk into a wall?
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1713,7 +1713,7 @@ namespace mbh_platformer
                     if (btn(1) && !new_dest)
                     {
                         dest_x += tile_size;
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1726,7 +1726,7 @@ namespace mbh_platformer
                     if (btn(2) && !new_dest)
                     {
                         dest_y -= tile_size;
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1739,7 +1739,7 @@ namespace mbh_platformer
                     if (btn(3) && !new_dest)
                     {
                         dest_y += tile_size;
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0))
+                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1765,6 +1765,8 @@ namespace mbh_platformer
             // TODO: Expand to support more levels.
             // TODO: Possibly expand the support variable numbers of gems per level.
             public UInt32 found_gems;
+            
+            public bool DEBUG_fly_enabled = false;
 
             public player_controller()
             {
@@ -2277,27 +2279,59 @@ namespace mbh_platformer
                 //move left/right
                 if (!is_dashing)
                 {
-                    if (bl == true)
+                    if (controller.DEBUG_fly_enabled)
                     {
-                        self.dx -= self.acc;
-                        br = false;//handle double press
-                    }
-                    else if (br == true)
-                    {
-                        self.dx += self.acc;
+                        if (bl == true)
+                        {
+                            self.dx -= self.acc;
+                            br = false;//handle double press
+                        }
+                        else if (br == true)
+                        {
+                            self.dx += self.acc;
+                        }
+                        else
+                        {
+                            self.dx *= self.dcc;
+                        }
+                        if (bu == true)
+                        {
+                            self.dy -= self.acc;
+                            br = false;//handle double press
+                        }
+                        else if (bd == true)
+                        {
+                            self.dy += self.acc;
+                        }
+                        else
+                        {
+                            self.dy *= self.dcc;
+                        }
                     }
                     else
                     {
-                        if (!platformed)
+                        if (bl == true)
                         {
-                            if (self.grounded != 0)
+                            self.dx -= self.acc;
+                            br = false;//handle double press
+                        }
+                        else if (br == true)
+                        {
+                            self.dx += self.acc;
+                        }
+                        else
+                        {
+                            if (!platformed)
                             {
+                                if (self.grounded != 0)
+                                {
 
-                                self.dx *= self.dcc;
-                            }
-                            else
-                            {
-                                self.dx *= self.air_dcc;
+                                    self.dx *= self.dcc;
+                                }
+                                else
+                                {
+                                    self.dx *= self.air_dcc;
+                                }
                             }
                         }
                     }
@@ -2346,7 +2380,7 @@ namespace mbh_platformer
 
                 //hit walls
                 Vector2 hit_point = new Vector2();
-                if (inst.collide_side(self, out hit_point))
+                if (!controller.DEBUG_fly_enabled && inst.collide_side(self, out hit_point))
                 {
                     if (is_dashing && dash_dir.X != 0)
                     {
@@ -2461,7 +2495,7 @@ namespace mbh_platformer
                     float grav_mod = in_water ? 0.5f : 1.0f;
 
                     //move in y
-                    if (dash_dir.Y == 0)
+                    if (dash_dir.Y == 0 && !controller.DEBUG_fly_enabled)
                     {
                         self.dy += self.grav * grav_mod;
                     }
@@ -2470,7 +2504,7 @@ namespace mbh_platformer
                 self.dy = mid(-self.max_dy, self.dy, self.max_dy);
 
                 // Apply gravity if not dashing, or vertical dash.
-                if (!is_dashing || dash_dir.Y != 0) // re-eval is_dashing since we might have just started jumping.
+                if (!is_dashing || dash_dir.Y != 0 || controller.DEBUG_fly_enabled) // re-eval is_dashing since we might have just started jumping.
                 {
                     self.y += self.dy;
                 }
@@ -2480,7 +2514,7 @@ namespace mbh_platformer
                 }
 
                 //floor
-                if (!inst.collide_floor(self, out hit_point))
+                if (controller.DEBUG_fly_enabled || !inst.collide_floor(self, out hit_point))
                 {
                     if (dy < 0)
                     {
@@ -2523,7 +2557,7 @@ namespace mbh_platformer
                 }
 
                 //roof
-                if (inst.collide_roof(self))
+                if (!controller.DEBUG_fly_enabled && inst.collide_roof(self))
                 {
                     // TODO: For now just kill dash. Should probably do some of 
                     // start_dash_bounce() to trigger tiles changes etc, but
@@ -4730,7 +4764,10 @@ namespace mbh_platformer
 
         public override Dictionary<string, object> GetScriptFunctions()
         {
-            return new Dictionary<string, object>();
+            Dictionary<string, object> Funcs = new Dictionary<string, object>();
+            Action toggle_fly = new Action(() => { pc.DEBUG_fly_enabled = !pc.DEBUG_fly_enabled; });
+            Funcs.Add("fly", toggle_fly);
+            return Funcs;
         }
 
         public override string GetPalTextureString()
