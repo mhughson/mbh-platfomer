@@ -374,24 +374,26 @@ namespace mbh_platformer
                     }
                 }
 
-                //if (inst.time_in_state % 2 == 0)
-                //{
-                //    rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
-                //    rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
-                //}
-                //pset(x, y, 8);
-                //pset(cx, cy, 9);
+                if (inst.debug_draw_enabled)
+                {
+                    //if (inst.time_in_state % 2 == 0)
+                    {
+                        rect(x - w / 2, y - h / 2, x + w / 2, y + h / 2, 14);
+                        rect(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2, 15);
+                    }
+                    pset(x, y, 8);
+                    pset(cx, cy, 9);
 
-                // bottom
-                //var offset_x = self.cw / 3.0f;
-                //var offset_y = self.ch / 2.0f;
-                //for (float i = -(offset_x); i <= (offset_x); i += 2)
-                //{
-                //    pset(x + i, y + offset_y, 9);
-                //}
+                    // bottom
+                    //var offset_x = self.cw / 3.0f;
+                    //var offset_y = self.ch / 2.0f;
+                    //for (float i = -(offset_x); i <= (offset_x); i += 2)
+                    //{
+                    //    pset(x + i, y + offset_y, 9);
+                    //}
 
-                // sides
-
+                    // sides
+                }
             }
         }
 
@@ -1490,6 +1492,8 @@ namespace mbh_platformer
 
             public Vector2 desired_dir = Vector2.Zero;
 
+            public bool is_flying = false;
+
             public player_top()
             {
                 anims = new Dictionary<string, anim>()
@@ -1641,7 +1645,7 @@ namespace mbh_platformer
             {
                 base._update60();
 
-                if (inst.hit_pause.is_paused() || (inst.cur_game_state == game_state.gameplay_dead))
+                if (inst.hit_pause.is_paused() || (inst.cur_game_state == game_state.gameplay_dead) || controller == null)
                 {
                     return;
                 }
@@ -1699,8 +1703,10 @@ namespace mbh_platformer
                     if (btn(0) && !new_dest)
                     {
                         dest_x -= tile_size;
+
+                        bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
                         // Are we trying to walk into a wall?
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
+                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1713,7 +1719,9 @@ namespace mbh_platformer
                     if (btn(1) && !new_dest)
                     {
                         dest_x += tile_size;
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
+                        bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
+                        // Are we trying to walk into a wall?
+                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1726,7 +1734,9 @@ namespace mbh_platformer
                     if (btn(2) && !new_dest)
                     {
                         dest_y -= tile_size;
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
+                        bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
+                        // Are we trying to walk into a wall?
+                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1739,7 +1749,9 @@ namespace mbh_platformer
                     if (btn(3) && !new_dest)
                     {
                         dest_y += tile_size;
-                        if (fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled)
+                        bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
+                        // Are we trying to walk into a wall?
+                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1818,6 +1830,7 @@ namespace mbh_platformer
                     }
                     else
                     {
+                        pawn.set_controller(null);
                         pawn = p;
                     }
                 }
@@ -1833,6 +1846,22 @@ namespace mbh_platformer
             public bool has_artifact(artifacts artifact)
             {
                 return (found_artifacts & artifact) != 0;
+            }
+
+            public int get_gem_count()
+            {
+                int gem_count = 0;
+                uint gems_found_cache = found_gems;
+
+                printh("get_gem_count: " + Convert.ToString(gems_found_cache, 2));
+
+                // Loop through each bit to see which contain a found gem.
+                for (int i = 0; i < 32; i++)
+                {
+                    gem_count += (int)(gems_found_cache & 1);
+                    gems_found_cache = gems_found_cache >> 1;
+                }
+                return gem_count;
             }
         }
 
@@ -1899,6 +1928,8 @@ namespace mbh_platformer
             public bool platformed = false;
             public float max_dx = 1;//max x speed
             public float max_dy = 4;//max y speed
+
+            public bool supports_map_links = true;
 
             // Hack to solve case where player hits 2 flying enemies in the same frame.
             // First enemy starts playing dash bouncing, and second sees he isn't jumping
@@ -2763,6 +2794,9 @@ namespace mbh_platformer
             public Vector2 pos_min = new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
             public Vector2 pos_max = new Vector2(368 - inst.Res.X * 0.5f, 1024 - inst.Res.Y * 0.5f);
 
+            public Vector2 play_area_min = Vector2.Zero;
+            public Vector2 play_area_max = Vector2.Zero;
+
             int shake_remaining = 0;
             float shake_force = 0;
 
@@ -2832,6 +2866,18 @@ namespace mbh_platformer
             //    }
             //}
 
+            public override void _draw()
+            {
+                base._draw();
+#if DEBUG
+                if (inst.debug_draw_enabled)
+                {
+                    rect(pos_min.X, pos_min.Y, pos_max.X - 1, pos_max.Y - 1, 8);
+                    rect(play_area_min.X, play_area_min.Y, play_area_max.X - 1, play_area_max.Y - 1, 9);
+                }
+#endif // DEBUG
+            }
+
             public Vector2 cam_pos()
             {
 
@@ -2879,6 +2925,17 @@ namespace mbh_platformer
             public bool is_obj_off_screen(sprite s)
             {
                 return !inst.intersects_obj_box(s, pos.X, pos.Y, inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
+            }
+
+            public bool is_pos_off_screen(float x, float y)
+            {
+                return !inst.intersects_point_box(x, y, pos.X, pos.Y, inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
+            }
+
+            public bool is_pos_in_play_area(float x, float y)
+            {
+                Vector2 play_area_size = (play_area_max - play_area_min) * 0.5f;
+                return inst.intersects_point_box(x, y, play_area_min.X + play_area_size.X, play_area_min.Y + play_area_size.Y, play_area_size.X, play_area_size.Y);
             }
         }
 
@@ -3316,7 +3373,7 @@ namespace mbh_platformer
             {
                 base._update60();
 
-                if (inst.intersects_obj_obj(this, inst.pc.pawn))
+                if (inst.pc.pawn.supports_map_links && inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
                     inst.active_map_link = this;
                     inst.queued_map = dest_map_path;
@@ -3375,9 +3432,14 @@ namespace mbh_platformer
 
                 if (inst.intersects_obj_obj(inst.pc.pawn, this))
                 {
+                    printh("found gem (before): " + Convert.ToString(inst.pc.found_gems, 2));
+
                     UInt32 gem_mask = (UInt32)1 << id + (inst.gems_per_level * inst.cur_level_id);
 
                     inst.pc.found_gems |= gem_mask;
+
+                    printh("found gem (mask): " + Convert.ToString(gem_mask, 2));
+                    printh("found gem (after): " + Convert.ToString(inst.pc.found_gems, 2));
 
                     //                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
 
@@ -3514,56 +3576,185 @@ namespace mbh_platformer
             }
         }
 
-        public class rocket_ship : sprite
+        public class rocket_ship : player_top
         {
             bool hit = false;
+            player_top old_pawn;
+            int ticks_possesed = 0;
+            int gems_required_to_fly = 8;
+
             public rocket_ship()
             {
                 anims = new Dictionary<string, anim>()
                 {
                     {
-                        "default",
+                        "walk_down",
                         new anim()
                         {
-                            ticks=15,//how long is each frame shown.
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(650, 4, 4),
+                            }
+                        }
+                    },
+                    {
+                        "walk_left",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(714, 4, 4),
+                            }
+                        }
+                    },
+                    {
+                        "walk_up",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
                             frames = new int[][]
                             {
                                 create_anim_frame(296, 4, 4),
                             }
                         }
                     },
+                    {
+                        "walk_right",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(586, 4, 4),
+                            }
+                        }
+                    },
+
+                    {
+                        "idle_down",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(650, 4, 4),
+                            }
+                        }
+                    },
+                    {
+                        "idle_left",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(714, 4, 4),
+                            }
+                        }
+                    },
+                    {
+                        "idle_up",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(296, 4, 4),
+                            }
+                        }
+                    },
+                    {
+                        "idle_right",
+                        new anim()
+                        {
+                            loop = true,
+                            ticks=1,
+                            frames = new int[][]
+                            {
+                                create_anim_frame(586, 4, 4),
+                            }
+                        }
+                    },
                 };
 
-                set_anim("default");
+                set_anim("idle_down");
 
                 w = 32;
                 h = 32;
                 cw = 16;
                 ch = 16;
+
+                dx = 0;
+                dy = 0;
+
+                supports_map_links = false;
+                is_flying = true;
             }
 
             public override void _update60()
             {
                 base._update60();
 
-                if (inst.intersects_obj_obj(this, inst.pc.pawn))
+                if (this == inst.pc.pawn)
+                {
+                    if (btnp(4) && ticks_possesed > 1)
+                    {
+//                        Point meta = inst.map_pos_to_meta_tile(flr(x/8.0f), flr(y/8.0f));
+                        old_pawn.x = old_pawn.dest_x = x;
+                        old_pawn.y = old_pawn.dest_y = y;
+                        inst.pc.possess(old_pawn);
+
+                        Int32 packed_pos = flr(x/8.0f) | (flr(y/8.0f) << 16);
+                        dset((int)cartdata_index.ship_map_pos_packed, packed_pos);
+
+                        old_pawn = null;
+                    }
+
+                    ticks_possesed++;
+                }
+                else if (inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
                     if (hit == false)
                     {
 
+                        //// todo: count gems found.
+                        //// temp hack. 1111 0000 is all found gems on level id 1 (pit with water).
+                        //if (inst.pc.found_gems >= 0xf0)
+                        //{
+                        //    inst.message = new message_box();
+                        //    inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
+                        //}
+                        //else
+                        //{
+                        //    inst.message = new message_box();
+                        //    inst.message.set_message("title", "more goodies needed!");
+                        //}
+                    }
+                    if (btnp(4))
+                    {
                         // todo: count gems found.
                         // temp hack. 1111 0000 is all found gems on level id 1 (pit with water).
-                        if (inst.pc.found_gems >= 0xf0)
+                        int gem_count = inst.pc.get_gem_count();
+                        if (inst.pc.get_gem_count() < gems_required_to_fly)
                         {
                             inst.message = new message_box();
-                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
+                            inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_fly.ToString() + " gems required to fly...");
                         }
                         else
                         {
-                            inst.message = new message_box();
-                            inst.message.set_message("title", "more goodies needed!");
+                            old_pawn = inst.pc.pawn as player_top;
+                            inst.pc.possess(this);
+                            ticks_possesed = 0;
                         }
-
                     }
                     hit = true;
                 }
@@ -3718,6 +3909,8 @@ namespace mbh_platformer
 
         int level_trans_time = 10;
 
+        bool debug_draw_enabled = false;
+
         public class message_box
         {
             public int chars_per_line;
@@ -3767,6 +3960,7 @@ namespace mbh_platformer
             version = 0,
             gems = 1,
             artifacts = 2,
+            ship_map_pos_packed = 3,
         }
 
         public Game1() : base()
@@ -3912,13 +4106,31 @@ namespace mbh_platformer
                     }
                     else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
                     {
-                        objs_add_queue.Add(
-                                new rocket_ship()
-                                {
-                                    x = (float)o.X + ((float)o.Width * 0.5f),
-                                    y = (float)o.Y + ((float)o.Height * 0.5f),
-                                }
-                            );
+                        rocket_ship r = new rocket_ship()
+                        {
+                            x = (float)o.X + ((float)o.Width * 0.5f),
+                            y = (float)o.Y + ((float)o.Height * 0.5f),
+                        };
+
+                        // right 16 bits = x
+                        // left 16 bits = y
+                        int pack_pos = dget((int)cartdata_index.ship_map_pos_packed);
+
+                        // TODO: Come up with a better invalid value.
+                        if (pack_pos != 0)
+                        {
+                            // Isolate the x and y components of the 32 bit value.
+                            short unpacked_x = (short)(pack_pos & short.MaxValue);
+                            short unpacked_y = (short)(pack_pos >> 16);
+
+                            r.x = unpacked_x * 8.0f;
+                            r.y = unpacked_y * 8.0f;
+                        }
+
+                        r.dest_x = r.x;
+                        r.dest_y = r.y;
+
+                        objs_add_queue.Add(r);
                     }
                     else if (string.Compare(o.Type, "spawn_checkpoint", true) == 0)
                     {
@@ -4013,6 +4225,8 @@ namespace mbh_platformer
             // Account for the fact that the camera area can be smaller than the game resolution.
             // This could be fixed in content by always setting a min cam size of ResX/Y, but this
             // allows us to change the resolution without having to update content.
+            Vector2 cam_area_min_og = cam_area_min;
+            Vector2 cam_area_max_og = cam_area_max;
             Vector2 cam_area = cam_area_max - cam_area_min;
             Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
 
@@ -4034,6 +4248,8 @@ namespace mbh_platformer
             {
                 pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
                 pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+                play_area_min = cam_area_min_og,
+                play_area_max = cam_area_max_og,
             };
             game_cam.jump_to_target();
 
@@ -4274,6 +4490,7 @@ namespace mbh_platformer
         BufferedKey next_level_key = new BufferedKey(Keys.PageDown);
         BufferedKey prev_level_key = new BufferedKey(Keys.PageUp);
         BufferedKey ReloadContentButton = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.R});
+        BufferedKey toggle_debug_draw = new BufferedKey(Keys.F1);
 
         public class map_config
         {
@@ -4335,6 +4552,13 @@ namespace mbh_platformer
                 initialize_map(ref spawn_point, true);
             }
 
+#if DEBUG
+            if (toggle_debug_draw.Update())
+            {
+                debug_draw_enabled = !debug_draw_enabled;
+            }
+#endif
+
             switch (cur_game_state)
             {
                 case game_state.main_menu:
@@ -4375,6 +4599,7 @@ namespace mbh_platformer
                         //    game_cam.shake((int)rnd(30) + 30, 1);
                         //}
 
+#if DEBUG
                         if (next_level_key.Update())
                         {
                             int index = debug_map_list.FindIndex((Tuple<string,string> param) => { return (param.Item2 == current_map); });
@@ -4395,7 +4620,7 @@ namespace mbh_platformer
                                 printh("queued: " + queued_map);
                             }
                         }
-
+#endif // DEBUG
                         break;
                     }
                 case game_state.gameplay_dead:
@@ -4567,6 +4792,11 @@ namespace mbh_platformer
             //}
             //pal();
 
+            if (game_cam != null)
+            {
+                game_cam._draw();
+            }
+
             // HUD
 
             Action draw_health = () =>
@@ -4641,9 +4871,12 @@ namespace mbh_platformer
                 case game_state.gameplay:
                     {
                         draw_hud();
-                        if (time_in_state < 500)
+                        if (debug_draw_enabled)
                         {
-                            printo(Path.GetFileNameWithoutExtension(current_map).ToLower(), 1, Res.Y - 12, 7, 0);
+                            if (time_in_state < 500)
+                            {
+                                printo(Path.GetFileNameWithoutExtension(current_map).ToLower(), 1, Res.Y - 12, 7, 0);
+                            }
                         }
                         break;
                     }
@@ -4730,16 +4963,19 @@ namespace mbh_platformer
                 }
             }
 
-            string btnstr = "";
-            for (int i = 0; i < 6; i++)
+            if (debug_draw_enabled)
             {
-                btnstr += btn(i) ? "1" : "0";
-                btnstr += " ";
+                string btnstr = "";
+                for (int i = 0; i < 6; i++)
+                {
+                    btnstr += btn(i) ? "1" : "0";
+                    btnstr += " ";
+                }
+
+                print(btnstr, 0, Res.Y - 5, 0);
+
+                print(objs.Count.ToString(), btnstr.Length * 4, Res.Y - 5, 1);
             }
-
-            print(btnstr, 0, Res.Y - 5, 0);
-
-            print(objs.Count.ToString(), btnstr.Length * 4, Res.Y - 5, 1);
         }
 
         public override string GetMapString()
