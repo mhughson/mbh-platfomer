@@ -3582,6 +3582,7 @@ namespace mbh_platformer
             player_top old_pawn;
             int ticks_possesed = 0;
             int gems_required_to_fly = 8;
+            int gems_required_to_win = 13;
 
             public rocket_ship()
             {
@@ -3744,16 +3745,21 @@ namespace mbh_platformer
                         // todo: count gems found.
                         // temp hack. 1111 0000 is all found gems on level id 1 (pit with water).
                         int gem_count = inst.pc.get_gem_count();
-                        if (inst.pc.get_gem_count() < gems_required_to_fly)
+                        if (gem_count >= gems_required_to_win)
                         {
                             inst.message = new message_box();
-                            inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_fly.ToString() + " gems required to fly...");
+                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
                         }
-                        else
+                        else if (gem_count >= gems_required_to_fly)
                         {
                             old_pawn = inst.pc.pawn as player_top;
                             inst.pc.possess(this);
                             ticks_possesed = 0;
+                        }
+                        else
+                        {
+                            inst.message = new message_box();
+                            inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_fly.ToString() + " gems required to fly...");
                         }
                     }
                     hit = true;
