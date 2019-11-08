@@ -1884,6 +1884,7 @@ namespace mbh_platformer
             rock_smasher = 1 << 6,
             ground_slam = 1 << 7,
             light = 1 << 8,
+            air_tank = 1 << 9,
 
             // TODO: Re-breather for underwater
             // TODO: Light for caves
@@ -1967,6 +1968,11 @@ namespace mbh_platformer
 
             }
 
+            public virtual void adjust_hp(float damage_amount)
+            {
+
+            }
+
             // Should only be called by PC, so that relationship is maintained.
             public virtual void set_controller(player_controller c)
             {
@@ -1999,6 +2005,9 @@ namespace mbh_platformer
             int jump_count = 0;
 
             bool in_water = false;
+            int in_water_timer = 0;
+            int time_before_water_damage_start = 60;
+            const int time_between_water_damage = 120;
 
             // The direction of the current dash. If not dashing,
             // this will be zero.
@@ -2426,6 +2435,11 @@ namespace mbh_platformer
 
                 bool in_water_new = (inst.is_packed_tile(fget(mget(flr(x / 8), flr(y / 8))), packed_tile_types.water));
 
+                if (!in_water_new || controller.has_artifact(artifacts.air_tank))
+                {
+                    in_water_timer = 0;
+                }
+
                 if (!in_water && in_water_new)
                 {
                     inst.objs.Add(new water_splash()
@@ -2433,6 +2447,19 @@ namespace mbh_platformer
                         x = x,
                         y = flr(y / 16) * 16.0f - 8.0f,
                     });
+                }
+                if (in_water_new && !controller.has_artifact(artifacts.air_tank))
+                {
+                    in_water_timer++;
+                    if (in_water_timer > time_before_water_damage_start)
+                    {
+                        if ((in_water_timer - time_before_water_damage_start) % time_between_water_damage == 0)
+                        {
+                            invul_time = 10;
+
+                            adjust_hp(-0.25f);
+                        }
+                    }
                 }
 
                 in_water = in_water_new;
@@ -2712,18 +2739,9 @@ namespace mbh_platformer
                 base._update60();
             }
 
-            public override void on_take_hit(sprite attacker)
+            public override void adjust_hp(float damage_amount)
             {
-                if (invul_time > 0)
-                {
-                    return;
-                }
-
-                hp -= attacker.attack_power;
-                invul_time = 120;
-                dx = Math.Sign(cx - attacker.cx) * 0.25f;
-                dy = 0;
-                jump_hold_time = 0;
+                hp += damage_amount;
 
                 if (hp <= 0)
                 {
@@ -2754,6 +2772,21 @@ namespace mbh_platformer
                 }
             }
 
+            public override void on_take_hit(sprite attacker)
+            {
+                if (invul_time > 0)
+                {
+                    return;
+                }
+                
+                invul_time = 120;
+                dx = Math.Sign(cx - attacker.cx) * 0.25f;
+                dy = 0;
+                jump_hold_time = 0;
+
+                adjust_hp(-attacker.attack_power);
+            }
+
             public override void push_pal()
             {
                 if (inst.active_map_link?.trans_dir != map_link.transition_dir.none)
@@ -2771,6 +2804,18 @@ namespace mbh_platformer
             {
                 if (inst.cur_game_state != game_state.gameplay_dead)
                 {
+                    if (in_water_timer > 0 /*&& in_water_timer < time_before_water_damage_start*/)
+                    {
+                        float percent = max(1.0f - ((float)in_water_timer / (float)time_before_water_damage_start), 0.0f);
+
+                        rectfill(x - 17, y - 17, x - 15 + (32), y - 15, 0);
+
+                        // Line drawing will show a single pixel for a width of 0, so avoid that.
+                        if (percent > 0)
+                        {
+                            line(x - 16, y - 16, x - 16 + (32 * percent), y - 16, 7);
+                        }
+                    }
                     base._draw();
                 }
             }
@@ -3562,6 +3607,12 @@ namespace mbh_platformer
                                 break;
                             }
 
+                        case artifacts.air_tank:
+                            {
+                                display_name = "air tank";
+                                break;
+                            }
+
                         default:
                             {
                                 display_name = "heart container";
@@ -3740,17 +3791,10 @@ namespace mbh_platformer
                         //    inst.message.set_message("title", "more goodies needed!");
                         //}
                     }
+                    int gem_count = inst.pc.get_gem_count();
                     if (btnp(4))
                     {
-                        // todo: count gems found.
-                        // temp hack. 1111 0000 is all found gems on level id 1 (pit with water).
-                        int gem_count = inst.pc.get_gem_count();
-                        if (gem_count >= gems_required_to_win)
-                        {
-                            inst.message = new message_box();
-                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
-                        }
-                        else if (gem_count >= gems_required_to_fly)
+                        if (gem_count >= gems_required_to_fly)
                         {
                             old_pawn = inst.pc.pawn as player_top;
                             inst.pc.possess(this);
@@ -3760,6 +3804,19 @@ namespace mbh_platformer
                         {
                             inst.message = new message_box();
                             inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_fly.ToString() + " gems required to fly...");
+                        }
+                    }
+                    if (btnp(5))
+                    {
+                        if (gem_count >= gems_required_to_win)
+                        {
+                            inst.message = new message_box();
+                            inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
+                        }
+                        else
+                        {
+                            inst.message = new message_box();
+                            inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_win.ToString() + " gems required to leave planet...");
                         }
                     }
                     hit = true;
@@ -4498,6 +4555,13 @@ namespace mbh_platformer
         BufferedKey ReloadContentButton = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.R});
         BufferedKey toggle_debug_draw = new BufferedKey(Keys.F1);
 
+        BufferedKey toggle_artifact_00 = new BufferedKey(Keys.D1);
+        BufferedKey toggle_artifact_01 = new BufferedKey(Keys.D2);
+        BufferedKey toggle_artifact_02 = new BufferedKey(Keys.D3);
+        BufferedKey toggle_artifact_03 = new BufferedKey(Keys.D4);
+        BufferedKey toggle_artifact_04 = new BufferedKey(Keys.D5);
+        BufferedKey toggle_artifact_05 = new BufferedKey(Keys.D6);
+
         public class map_config
         {
             public int darkness_level = 0;
@@ -4562,6 +4626,36 @@ namespace mbh_platformer
             if (toggle_debug_draw.Update())
             {
                 debug_draw_enabled = !debug_draw_enabled;
+            }
+
+            if (toggle_artifact_00.Update())
+            {
+                inst.pc.found_artifacts ^= artifacts.dash_pack;
+            }
+
+            if (toggle_artifact_01.Update())
+            {
+                inst.pc.found_artifacts ^= artifacts.jump_boots;
+            }
+
+            if (toggle_artifact_02.Update())
+            {
+                inst.pc.found_artifacts ^= artifacts.rock_smasher;
+            }
+
+            if (toggle_artifact_03.Update())
+            {
+                inst.pc.found_artifacts ^= artifacts.ground_slam;
+            }
+
+            if (toggle_artifact_04.Update())
+            {
+                inst.pc.found_artifacts ^= artifacts.light;
+            }
+
+            if (toggle_artifact_05.Update())
+            {
+                inst.pc.found_artifacts ^= artifacts.air_tank;
             }
 #endif
 
@@ -4821,6 +4915,10 @@ namespace mbh_platformer
                     {
                         id = 230;
                     }
+                    else if (i > pc.pawn.hp)
+                    {
+                        id = 238;
+                    }
                     else
                     {
                         float remainder = pc.pawn.hp - flr(pc.pawn.hp);
@@ -4981,6 +5079,21 @@ namespace mbh_platformer
                 print(btnstr, 0, Res.Y - 5, 0);
 
                 print(objs.Count.ToString(), btnstr.Length * 4, Res.Y - 5, 1);
+
+                int ypos = 18;
+                int yinc = 8;
+                printo("dp:" + (((pc.found_artifacts & artifacts.dash_pack) == artifacts.dash_pack) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
+                printo("jb:" + (((pc.found_artifacts & artifacts.jump_boots) == artifacts.jump_boots) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
+                printo("rs:" + (((pc.found_artifacts & artifacts.rock_smasher) == artifacts.rock_smasher) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
+                printo("gs:" + (((pc.found_artifacts & artifacts.ground_slam) == artifacts.ground_slam) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
+                printo("lt:" + (((pc.found_artifacts & artifacts.light) == artifacts.light) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
+                printo("at:" + (((pc.found_artifacts & artifacts.air_tank) == artifacts.air_tank) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
             }
         }
 
@@ -5009,6 +5122,20 @@ namespace mbh_platformer
             Dictionary<string, object> Funcs = new Dictionary<string, object>();
             Action toggle_fly = new Action(() => { pc.DEBUG_fly_enabled = !pc.DEBUG_fly_enabled; });
             Funcs.Add("fly", toggle_fly);
+            Action call_ship = new Action(() =>
+            {
+                foreach(PicoXObj o in objs)
+                {
+                    if (o.GetType() == typeof(rocket_ship))
+                    {
+                        rocket_ship r = o as rocket_ship;
+                        r.x = r.dest_x = pc.pawn.x;
+                        r.y = r.dest_y = pc.pawn.y;
+                        break;
+                    }
+                }
+            });
+            Funcs.Add("call_ship", call_ship);
             return Funcs;
         }
 
