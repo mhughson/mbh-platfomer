@@ -49,6 +49,18 @@
 #begin raw/map_ss_echo_00.tmx
 /copy:raw/map_ss_echo_00.tmx
 
+#begin raw/map_ss_fox_00.tmx
+/copy:raw/map_ss_fox_00.tmx
+
+#begin raw/map_ss_fox_01.tmx
+/copy:raw/map_ss_fox_01.tmx
+
+#begin raw/map_ss_fox_02.tmx
+/copy:raw/map_ss_fox_02.tmx
+
+#begin raw/map_ss_golf_00.tmx
+/copy:raw/map_ss_golf_00.tmx
+
 #begin raw/map_ss_horz_template.tmx
 /copy:raw/map_ss_horz_template.tmx
 
