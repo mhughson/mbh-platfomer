@@ -910,7 +910,7 @@ namespace mbh_platformer
 
                     dx = Math.Sign(attacker.dx) * 0.5f;
 
-                    dy = -3;
+                    dy = -3.5f;
 
                     solid = false;
 
@@ -1779,6 +1779,7 @@ namespace mbh_platformer
             public UInt32 found_gems;
             
             public bool DEBUG_fly_enabled = false;
+            public bool DEBUG_god_enabled = false;
 
             public player_controller()
             {
@@ -1928,7 +1929,7 @@ namespace mbh_platformer
 
             public bool platformed = false;
             public float max_dx = 1;//max x speed
-            public float max_dy = 4;//max y speed
+            public float max_dy = 5;//max y speed
 
             public bool supports_map_links = true;
 
@@ -1994,6 +1995,10 @@ namespace mbh_platformer
             public float dash_time = 0;
             public int dash_count = 0;
 
+            // count down used for continuing to draw trails after dash is complete. This only
+            // drains when the player is grounded, etc.
+            public float trail_time = 0;
+
             complex_button jump_button = new complex_button(4);
             complex_button dash_button = new complex_button(5);
 
@@ -2012,6 +2017,9 @@ namespace mbh_platformer
             // The direction of the current dash. If not dashing,
             // this will be zero.
             Vector2 dash_dir = Vector2.Zero;
+
+            Queue<sprite> player_hist = new Queue<sprite>(60);
+            bool is_hist = false;
 
             public player_side() : base()
             {
@@ -2163,7 +2171,7 @@ namespace mbh_platformer
 
                 // Only do this stuff when bouncing up.
                 dash_count = 0;
-                dy = -8;
+                dy = -max_dy;
                 inst.objs_add_queue.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
 
                 if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.vanishing))
@@ -2179,23 +2187,7 @@ namespace mbh_platformer
                 }
                 if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.rock_smash) && inst.pc.has_artifact(artifacts.rock_smasher))
                 {
-                    var grid_pos = inst.map_pos_to_meta_tile(mx, my);
-
-                    for (int i = 0; i <= 1; i++)
-                    {
-                        for (int j = 0; j <= 1; j++)
-                        {
-                            var final_x = (grid_pos.X + i) * 8 + 4;
-                            var final_y = (grid_pos.Y + j) * 8 + 4;
-                            inst.objs_add_queue.Add(
-                                new simple_fx_particle(-1 + (i * 2), (1 - j + 1) * -3, mget(final_x / 8, final_y / 8))
-                                {
-                                    x = final_x,
-                                    y = final_y,
-                                });
-                        }
-                    }
-                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+                    inst.smash_rock(mx, my, true);
                 }
 
                 inst.hit_pause.start_pause(hit_pause_manager.pause_reason.bounce);
@@ -2268,6 +2260,8 @@ namespace mbh_platformer
                 {
                     dash_count = 1;
                     dash_time = 30;
+                    // NOTE: only drains when grounded, etc.
+                    trail_time = 15;
                     dy = 0;
                     self.jump_hold_time = 0; // kill jump
 
@@ -2382,7 +2376,14 @@ namespace mbh_platformer
                 if (dash_dir.Y <= 0)
                 {
                     dash_time = max(0, dash_time - 1);
+
+                    // If the player is also grounded and not dashing, start to remove the dashing trail.
+                    if (grounded != 0 && !get_is_dashing())
+                    {
+                        trail_time = max(0, trail_time - 1);
+                    }
                 }
+
 
                 const float dash_speed = 2.0f;
                 if (is_dashing)
@@ -2474,8 +2475,8 @@ namespace mbh_platformer
                 //multiple frames.
                 //if (!is_dashing)
 
-                int mod_max_jump_press = max_jump_press; // in_water ? max_jump_press * 6 : max_jump_press;
-                float mod_jump_speed = in_water ? jump_speed * 2.0f : jump_speed;
+                int mod_max_jump_press = in_water ? max_jump_press * 4 : max_jump_press;
+                float mod_jump_speed = in_water ? jump_speed * 1.0f : jump_speed;
 
                 {
                     if (self.jump_button.is_down)
@@ -2784,7 +2785,10 @@ namespace mbh_platformer
                 dy = 0;
                 jump_hold_time = 0;
 
-                adjust_hp(-attacker.attack_power);
+                if (!controller.DEBUG_god_enabled)
+                {
+                    adjust_hp(-attacker.attack_power);
+                }
             }
 
             public override void push_pal()
@@ -2802,6 +2806,54 @@ namespace mbh_platformer
 
             public override void _draw()
             {
+                if (!is_hist)
+                {
+                    // The number of past players to draw.
+                    int hist_len = 8;
+                    // Only adjust the history every so often, so avoid to much overlap.
+                    if (inst.time_in_state % 4 == 0)
+                    {
+                        {
+                            player_side copy = MemberwiseClone() as player_side;
+                            copy.is_hist = true;
+                            player_hist.Enqueue(copy);
+                        }
+
+                        while (player_hist.Count > hist_len)
+                        {
+                            player_hist.Dequeue();
+                        }
+
+                        // If we no longer want to trail dequeue twice to account for the one just added
+                        // and one more to start shrinking the queue. This is a little clumbsy but works.
+                        if (trail_time <= 0)
+                        {
+                            if (player_hist.Count > 0)
+                            {
+                                player_hist.Dequeue();
+                            }
+                            if (player_hist.Count > 0)
+                            {
+                                player_hist.Dequeue();
+                            }
+                        }
+                    }
+
+                    //if (get_is_dashing())
+                    {
+                        float i = 3;
+                        float step = (float)inst.bright_table.Length / (float)hist_len;
+                        foreach (sprite s in player_hist)
+                        {
+                            //inst.apply_pal(inst.fade_table[3]);
+                            inst.apply_pal(inst.bright_table[(int)Math.Ceiling(i)]);
+                            (s)._draw();
+                            i = max(0, (float)i - step);
+                        }
+                        pal();
+                    }
+                }
+
                 if (inst.cur_game_state != game_state.gameplay_dead)
                 {
                     if (in_water_timer > 0 /*&& in_water_timer < time_before_water_damage_start*/)
@@ -2862,28 +2914,30 @@ namespace mbh_platformer
 
                 self.shake_remaining = (int)max(0, self.shake_remaining - 1);
 
+                float max_cam_speed = 8.0f;
+
                 //follow target outside of
                 //pull range.
                 if (pull_max_x() < self.tar.pawn.x)
                 {
 
-                    self.pos.X += min(self.tar.pawn.x - pull_max_x(), 4);
+                    self.pos.X += min(self.tar.pawn.x - pull_max_x(), max_cam_speed);
 
                 }
                 if (pull_min_x() > self.tar.pawn.x)
                 {
-                    self.pos.X += min((self.tar.pawn.x - pull_min_x()), 4);
+                    self.pos.X += min((self.tar.pawn.x - pull_min_x()), max_cam_speed);
                 }
 
 
                 if (pull_max_y() < self.tar.pawn.y)
                 {
-                    self.pos.Y += min(self.tar.pawn.y - pull_max_y(), 4);
+                    self.pos.Y += min(self.tar.pawn.y - pull_max_y(), max_cam_speed);
 
                 }
                 if (pull_min_y() > self.tar.pawn.y)
                 {
-                    self.pos.Y += min((self.tar.pawn.y - pull_min_y()), 4);
+                    self.pos.Y += min((self.tar.pawn.y - pull_min_y()), max_cam_speed);
 
                 }
 
@@ -3393,6 +3447,77 @@ namespace mbh_platformer
                     inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851 });
                     inst.objs_remove_queue.Add(this);
                 }
+            }
+        }
+
+        public class block_exploder : PicoXObj
+        {
+            public int map_x;
+            public int map_y;
+            public int time_remaining;
+
+            public block_exploder(int map_x, int map_y, int life_span) : base()
+            {
+                this.map_x = map_x;
+                this.map_y = map_y;
+                time_remaining = life_span;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                time_remaining -= 1;
+
+                if (time_remaining <= 0)
+                {
+
+                    for (int y = -2; y <= 2; y+=2)
+                    {
+                        for (int x = -2; x <= 2; x+=2)
+                        {
+                            // Only do up down left and right.
+                            if (abs(x) == abs(y))
+                            {
+                                continue;
+                            }
+                            int mx = map_x + x;
+                            int my = map_y + y;
+                            if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.rock_smash))
+                            {
+                                inst.smash_rock(mx, my, true);
+                            }
+                        }
+                    }
+                    
+                    inst.objs_remove_queue.Add(this);
+                }
+            }
+        }
+
+        private void smash_rock(int mx, int my, bool with_explode)
+        {
+            var grid_pos = inst.map_pos_to_meta_tile(mx, my);
+
+            for (int i = 0; i <= 1; i++)
+            {
+                for (int j = 0; j <= 1; j++)
+                {
+                    var final_x = (grid_pos.X + i) * 8 + 4;
+                    var final_y = (grid_pos.Y + j) * 8 + 4;
+                    inst.objs_add_queue.Add(
+                        new simple_fx_particle(-1 + (i * 2), (1 - j + 1) * -3, mget(final_x / 8, final_y / 8))
+                        {
+                            x = final_x,
+                            y = final_y,
+                        });
+                }
+            }
+            inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+
+            if (with_explode)
+            {
+                inst.objs_add_queue.Add(new block_exploder(mx, my, 2));
             }
         }
 
@@ -4428,10 +4553,17 @@ namespace mbh_platformer
         public int[] default_pal = new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         public int[][] fade_table =
         {
-            new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, // brightest
+            new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, // default
             new int[] { 0, 1, 2, 3, 4, 0, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15 },
             new int[] { 0, 1, 2, 3, 4, 0, 0, 5, 8, 9, 10, 11, 12, 13, 14, 15 },
             new int[] { 0, 1, 2, 3, 4, 0, 0, 0, 8, 9, 10, 11, 12, 13, 14, 15 }, // darkest
+        };
+        public int[][] bright_table =
+        {
+            new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, // default
+            new int[] { 5, 1, 2, 3, 4, 6, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+            new int[] { 6, 1, 2, 3, 4, 7, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+            new int[] { 7, 1, 2, 3, 4, 7, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, // brightest
         };
         // blue tint
         public int[] default_pal_invert_fg = new int[] { 0, 1, 2, 3, 4, 13, 12, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -4899,6 +5031,73 @@ namespace mbh_platformer
 
             // HUD
 
+            camera(0, 0);
+
+            //if (night_vision_enabled || ir_vision_enabled)
+            if (false)
+            {
+                player_pawn p = pc.pawn;
+                if (p != null)
+                {
+                    Vector2 v = new Vector2(p.x - game_cam.cam_pos().X /*+ (Res.X * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/, p.y - game_cam.cam_pos().Y /*+ (Res.Y * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/);
+
+                    float size = 200.0f - sin(time_in_state * 0.011f) * 1.0f;
+                    float max_dist = size*size;
+
+                    rectfill(0, 0, Res.X, v.Y - size, 0);
+                    rectfill(0, v.Y + size, Res.X, Res.Y, 0);
+                    rectfill(0, v.Y - size, v.X - size, v.Y + size, 0);
+                    rectfill(v.X + size, v.Y - size, Res.X, v.Y + size, 0);
+
+                    // vignette
+                    for (int x = (int)v.X - (int)size; x < v.X + size; x++)
+                    {
+                        for (int y = (int)v.Y - (int)size; y < v.Y + size; y++)
+                        {
+
+                            float dist_rnd = 64;
+                            //if (game_world.cur_area.light_status == area.lighting_status.on)
+                            //{
+                            //    dist_rnd = 64;
+                            //}
+                            //Vector2 v = new Vector2(p.x - game_cam.cam_pos().X /*+ (Res.X * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/, p.y - game_cam.cam_pos().Y /*+ (Res.Y * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/);
+                            //Vector2 v = new Vector2(63 + (rnd(16) - 8), 63 + (rnd(16) - 8));
+                            //Vector2 vf = v + new Vector2((rnd(dist_rnd) - (dist_rnd * 0.5f)));
+                            float dist = Vector2.DistanceSquared(v, new Vector2(x, y));
+
+                            //int fade_index = (int)MathHelper.SmoothStep(0, 3, dist / max_dist);
+                            int fade_index = (int)mid(0, (dist / max_dist) * 4.0f, 3);
+                            //if (rnd(100) < 75.0f)
+                            //{
+                            //    fade_index = MathHelper.Clamp(fade_index + ((int)rnd(3) - 1), 0, 7);
+                            //}
+                            if (fade_index != 0)
+                            {
+                                pset(x, y, fade_table[fade_index][pget(x, y)]);
+                            }
+                        }
+                    }
+                }
+
+                // scanline
+                //int min_y = (int)(((time_in_state * 0.5f) % 128.0f));
+
+                //int max_y = min_y + 3;
+
+                //for (int y = min_y; y < max_y; y++)
+                //{
+                //    float y_final = y % 128;
+
+                //    float d = sin(((y_final * cos(time_in_state * 0.1f)) + time_in_state * 2) * 0.01f) * 127;
+
+                //    for (int x = (int)abs(d); x > 0; x--)
+                //    {
+                //        float x_samp = x - cos(time_in_state * 0.1f);
+                //        pset(x, y_final, pget((int)x_samp, (int)y_final));
+                //    }
+                //}
+            }
+
             Action draw_health = () =>
             {
                 if (pc == null || pc.pawn == null)
@@ -4957,8 +5156,6 @@ namespace mbh_platformer
                 draw_health();
                 //pal();
             };
-
-            camera(0, 0);
 
             int step = 1;
 
@@ -5136,6 +5333,11 @@ namespace mbh_platformer
                 }
             });
             Funcs.Add("call_ship", call_ship);
+            Action god = new Action(() =>
+            {
+                pc.DEBUG_god_enabled = !pc.DEBUG_god_enabled;
+            });
+            Funcs.Add("god", god);
             return Funcs;
         }
 

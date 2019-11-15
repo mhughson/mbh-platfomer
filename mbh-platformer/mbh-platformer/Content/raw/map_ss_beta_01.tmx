@@ -39,7 +39,7 @@
 </data>
  </layer>
  <objectgroup id="2" name="Object Layer 1">
-  <object id="1" name="bottom_center" type="spawn_point" x="392" y="216" width="32" height="24">
+  <object id="1" name="bottom_center" type="spawn_point" x="392" y="208" width="32" height="24">
    <properties>
     <property name="type" value="side"/>
    </properties>
