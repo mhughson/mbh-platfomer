@@ -5029,6 +5029,21 @@ namespace mbh_platformer
                 game_cam._draw();
             }
 
+            // Map grid.
+            if (debug_draw_enabled)
+            {
+                int start_x = flr(game_cam.cam_pos().X / 16.0f) * 16;
+                int start_y = flr(game_cam.cam_pos().Y / 16.0f) * 16;
+                for (int x = start_x; x < start_x + Res.X; x+=16)
+                {
+                    line(x, start_y, x, start_y + Res.Y, 8);
+                }
+                for (int y = start_y; y < start_y + Res.Y; y += 16)
+                {
+                    line(start_x, y, start_x + Res.X, y, 9);
+                }
+            }
+
             // HUD
 
             camera(0, 0);
