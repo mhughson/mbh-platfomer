@@ -19,6 +19,9 @@
 #begin raw/map_ow_top.tmx
 /copy:raw/map_ow_top.tmx
 
+#begin raw/map_ss_abby_00.tmx
+/copy:raw/map_ss_abby_00.tmx
+
 #begin raw/map_ss_alpha_00.tmx
 /copy:raw/map_ss_alpha_00.tmx
 
@@ -108,6 +111,21 @@
 
 #begin raw/platformer_sheet_1.tsx
 /copy:raw/platformer_sheet_1.tsx
+
+#begin raw/platformer_sheet_2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:raw/platformer_sheet_2.png
+
+#begin raw/platformer_sheet_2.tsx
+/copy:raw/platformer_sheet_2.tsx
 
 #begin raw/sheet_hello.png
 /importer:TextureImporter

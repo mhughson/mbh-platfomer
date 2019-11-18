@@ -1,9 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.2.5" name="platformer_sheet_1" tilewidth="8" tileheight="8" tilecount="2048" columns="16">
+<tileset version="1.2" tiledversion="1.2.5" name="platformer_sheet_2" tilewidth="8" tileheight="8" tilecount="1024" columns="16">
  <properties>
-  <property name="Bank" type="int" value="1"/>
+  <property name="Bank" type="int" value="2"/>
  </properties>
- <image source="platformer_sheet_1.png" width="128" height="1024"/>
+ <image source="platformer_sheet_2.png" width="128" height="512"/>
+ <tile id="0">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="1">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="2">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="3">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="4">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="5">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
  <tile id="6">
   <properties>
    <property name="Flag" type="int" value="1"/>
@@ -14,34 +44,64 @@
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
+ <tile id="8">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="9">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
  <tile id="10">
   <properties>
-   <property name="Flag" type="int" value="12"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="11">
   <properties>
-   <property name="Flag" type="int" value="12"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="12">
   <properties>
-   <property name="Flag" type="int" value="2"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="13">
   <properties>
-   <property name="Flag" type="int" value="2"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="14">
+ <tile id="16">
   <properties>
-   <property name="Flag" type="int" value="11"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="15">
+ <tile id="17">
   <properties>
-   <property name="Flag" type="int" value="11"/>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="18">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="19">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="20">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="21">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="22">
@@ -54,64 +114,134 @@
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
+ <tile id="24">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="25">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="26">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="27">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
  <tile id="28">
   <properties>
-   <property name="Flag" type="int" value="2"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="29">
   <properties>
-   <property name="Flag" type="int" value="2"/>
-  </properties>
- </tile>
- <tile id="30">
-  <properties>
-   <property name="Flag" type="int" value="11"/>
-  </properties>
- </tile>
- <tile id="31">
-  <properties>
-   <property name="Flag" type="int" value="11"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="32">
   <properties>
-   <property name="Flag" type="int" value="17"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="33">
   <properties>
-   <property name="Flag" type="int" value="17"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="34">
   <properties>
-   <property name="Flag" type="int" value="8"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="35">
   <properties>
-   <property name="Flag" type="int" value="8"/>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="36">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="37">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="38">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="39">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="44">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="45">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="48">
   <properties>
-   <property name="Flag" type="int" value="17"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="49">
   <properties>
-   <property name="Flag" type="int" value="17"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="50">
   <properties>
-   <property name="Flag" type="int" value="8"/>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="51">
   <properties>
-   <property name="Flag" type="int" value="8"/>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="52">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="53">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="54">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="55">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="60">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="61">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="64">
@@ -140,6 +270,26 @@
   </properties>
  </tile>
  <tile id="69">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="70">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="71">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="74">
+  <properties>
+   <property name="Flag" type="int" value="1"/>
+  </properties>
+ </tile>
+ <tile id="75">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
@@ -174,162 +324,162 @@
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="96">
+ <tile id="86">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="97">
+ <tile id="87">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="98">
+ <tile id="90">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="99">
+ <tile id="91">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="100">
+ <tile id="202">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="101">
+ <tile id="203">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="112">
+ <tile id="218">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="113">
+ <tile id="219">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="114">
+ <tile id="264">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="115">
+ <tile id="265">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="116">
+ <tile id="266">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="117">
+ <tile id="267">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="128">
+ <tile id="268">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="129">
+ <tile id="269">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="130">
+ <tile id="270">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="131">
+ <tile id="271">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="132">
+ <tile id="280">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="133">
+ <tile id="281">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="144">
+ <tile id="282">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="145">
+ <tile id="283">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="146">
+ <tile id="284">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="147">
+ <tile id="285">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="148">
+ <tile id="286">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="149">
+ <tile id="287">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="320">
+ <tile id="298">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="321">
+ <tile id="299">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="322">
+ <tile id="300">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="323">
+ <tile id="301">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="324">
+ <tile id="314">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="325">
+ <tile id="315">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="326">
+ <tile id="316">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="327">
+ <tile id="317">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
@@ -364,42 +514,12 @@
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="336">
+ <tile id="334">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="337">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="338">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="339">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="340">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="341">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="342">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="343">
+ <tile id="335">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
@@ -434,447 +554,12 @@
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="352">
+ <tile id="350">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>
  </tile>
- <tile id="353">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="354">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="355">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="356">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="357">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="358">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="359">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="364">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="365">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="368">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="369">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="370">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="371">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="372">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="373">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="374">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="375">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="380">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="381">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="384">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="385">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="386">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="387">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="388">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="389">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="390">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="391">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="394">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="395">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="400">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="401">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="402">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="403">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="404">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="405">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="406">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="407">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="410">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="411">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="522">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="523">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="538">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="539">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="569">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="570">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="573">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="574">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="584">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="585">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="586">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="587">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="588">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="589">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="590">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="591">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="600">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="601">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="602">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="603">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="604">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="605">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="606">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="607">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="618">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="619">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="620">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="621">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="634">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="635">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="636">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="637">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="638">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="648">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="649">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="650">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="651">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="652">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="653">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="654">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="655">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="664">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="665">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="666">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="667">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="668">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="669">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="670">
-  <properties>
-   <property name="Flag" type="int" value="1"/>
-  </properties>
- </tile>
- <tile id="671">
+ <tile id="351">
   <properties>
    <property name="Flag" type="int" value="1"/>
   </properties>

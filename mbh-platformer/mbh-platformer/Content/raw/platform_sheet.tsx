@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tileset version="1.2" tiledversion="1.2.5" name="platform_sheet" tilewidth="8" tileheight="8" tilecount="1024" columns="16">
+ <properties>
+  <property name="Bank" type="int" value="0"/>
+ </properties>
  <image source="platformer_sheet.png" trans="000000" width="128" height="512"/>
  <tile id="834">
   <properties>

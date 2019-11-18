@@ -1706,7 +1706,7 @@ namespace mbh_platformer
 
                         bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
                         // Are we trying to walk into a wall?
-                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
+                        if (going_off_screen || (!is_flying && mfget(flr(dest_x / 8), flr(dest_y / 8), 0, 1) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1721,7 +1721,7 @@ namespace mbh_platformer
                         dest_x += tile_size;
                         bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
                         // Are we trying to walk into a wall?
-                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
+                        if (going_off_screen || (!is_flying && mfget(flr(dest_x / 8), flr(dest_y / 8), 0, 1) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1736,7 +1736,7 @@ namespace mbh_platformer
                         dest_y -= tile_size;
                         bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
                         // Are we trying to walk into a wall?
-                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
+                        if (going_off_screen || (!is_flying && mfget(flr(dest_x / 8), flr(dest_y / 8), 0, 1) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -1751,7 +1751,7 @@ namespace mbh_platformer
                         dest_y += tile_size;
                         bool going_off_screen = !inst.game_cam.is_pos_in_play_area(dest_x, dest_y);
                         // Are we trying to walk into a wall?
-                        if (going_off_screen || (!is_flying && fget(mget(flr(dest_x / 8), flr(dest_y / 8)), 0) && !controller.DEBUG_fly_enabled))
+                        if (going_off_screen || (!is_flying && mfget(flr(dest_x / 8), flr(dest_y / 8), 0, 1) && !controller.DEBUG_fly_enabled))
                         {
                             dest_x = x;
                             dest_y = y;
@@ -4994,7 +4994,9 @@ namespace mbh_platformer
                         //pal(0, 7);
                         apply_pal(get_cur_pal(false));
                         bset(cur_map_bank);
-                        map(0, 0, 0, 0, 16, 16);
+                        map(0, 0, 0, 0, 16, 16, 0, 0);
+                        map(0, 0, 0, 0, 16, 16, 0, 1);
+                        //map(0, 0, 0, 0, 16, 16, 0, 2);
                         bset(0);
                         pal();
                         //map(0, 0, 0, 0, 16, 16, 0, 1); // easy mode?
@@ -5034,13 +5036,13 @@ namespace mbh_platformer
             {
                 int start_x = flr(game_cam.cam_pos().X / 16.0f) * 16;
                 int start_y = flr(game_cam.cam_pos().Y / 16.0f) * 16;
-                for (int x = start_x; x < start_x + Res.X; x+=16)
+                for (int x = start_x; x <= start_x + Res.X; x+=16)
                 {
-                    line(x, start_y, x, start_y + Res.Y, 8);
+                    line(x, start_y, x, start_y + Res.Y + 16, 2);
                 }
-                for (int y = start_y; y < start_y + Res.Y; y += 16)
+                for (int y = start_y; y <= start_y + Res.Y; y += 16)
                 {
-                    line(start_x, y, start_x + Res.X, y, 9);
+                    line(start_x, y, start_x + Res.X + 16, y, 2);
                 }
             }
 
@@ -5321,7 +5323,7 @@ namespace mbh_platformer
 
         public override List<string> GetSheetPath()
         {
-            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1"};
+            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2" };
         }
 
         public override Dictionary<int, string> GetSoundEffectPaths()
