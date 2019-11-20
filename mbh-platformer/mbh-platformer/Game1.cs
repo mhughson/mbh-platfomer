@@ -3766,6 +3766,7 @@ namespace mbh_platformer
             bool hit = false;
             player_top old_pawn;
             int ticks_possesed = 0;
+            int ticks_unpossed = 999; // start "fully possessed"
             int gems_required_to_fly = 8;
             int gems_required_to_win = 13;
 
@@ -3899,10 +3900,15 @@ namespace mbh_platformer
                         old_pawn.y = old_pawn.dest_y = y;
                         inst.pc.possess(old_pawn);
 
-                        Int32 packed_pos = flr(x/8.0f) | (flr(y/8.0f) << 16);
+                        Int32 packed_pos = flr(dest_x/8.0f) | (flr(dest_y/8.0f) << 16);
                         dset((int)cartdata_index.ship_map_pos_packed, packed_pos);
 
+                        // Save the player pos too.
+                        packed_pos = flr(inst.pc.pawn.x / 8.0f) | (flr(inst.pc.pawn.y / 8.0f) << 16);
+                        dset((int)cartdata_index.overworld_pos_packed, packed_pos);
+
                         old_pawn = null;
+                        ticks_unpossed = 0;
                     }
 
                     ticks_possesed++;
@@ -3959,6 +3965,45 @@ namespace mbh_platformer
                 {
                     hit = false;
                 }
+
+                // Not in the ship.
+                if (this != inst.pc.pawn)
+                {
+                    ticks_unpossed++;
+                }
+            }
+
+            public override void _draw()
+            {
+                inst.apply_pal(inst.fade_table[3]);
+                base._draw();
+                pal();
+                float temp_y = y;
+                const float min_h = 2.0f;
+                const float max_h = 6.0f;
+                const float intro_ticks = 120;
+                const float outro_ticks = 30;
+                if (old_pawn != null)
+                {
+
+                    if (ticks_possesed < intro_ticks)
+                    {
+                        y -= flr((ticks_possesed / intro_ticks) * max_h);
+                    }
+                    else
+                    {
+                        y -= ((cos((ticks_possesed - intro_ticks) * 0.005f) + 1.0f) * ((max_h - min_h) *0.5f)) + min_h;
+                    }
+                }
+                else
+                {
+                    if (ticks_unpossed < outro_ticks)
+                    {
+                        y -= flr((1.0f - (ticks_unpossed / outro_ticks)) * max_h);
+                    }
+                }
+                base._draw();
+                y = temp_y;
             }
         }
 
