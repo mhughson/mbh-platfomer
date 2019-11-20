@@ -1692,6 +1692,15 @@ namespace mbh_platformer
                     set_anim("idle_" + next_idle);
                 }
 
+                //// Save the overworld position every time we land on a tile.
+                //// TODO: This would ideally only be done when transitioning into a new level.
+                ////       Or maybe it only needs to be done when entering an OW level?
+                //if (dest_x == x && dest_y == y)
+                //{
+                //    Int32 packed_pos = flr(x / 8.0f) | (flr(y / 8.0f) << 16);
+                //    dset((int)cartdata_index.overworld_pos_packed, packed_pos);
+                //}
+
 
                 const float tile_size = 16;
 
@@ -4149,6 +4158,7 @@ namespace mbh_platformer
             gems = 1,
             artifacts = 2,
             ship_map_pos_packed = 3,
+            overworld_pos_packed = 4,
         }
 
         public Game1() : base()
@@ -4232,6 +4242,12 @@ namespace mbh_platformer
                                     };
                                     (pawn as player_top).dest_x = pawn.x;
                                     (pawn as player_top).dest_y = pawn.y;
+
+                                    // Save the overworld position every time we enter the overworld.
+                                    // This is only ever applied when coming from the main menu, with the
+                                    // assumption that the player cannot die in the open world.
+                                    Int32 packed_pos = flr(pawn.x / 8.0f) | (flr(pawn.y / 8.0f) << 16);
+                                    dset((int)cartdata_index.overworld_pos_packed, packed_pos);
 
                                     break;
                                 }
@@ -4461,6 +4477,23 @@ namespace mbh_platformer
             // Leaving...
             switch (cur_game_state)
             {
+                case game_state.main_menu:
+                    {
+                        // right 16 bits = x
+                        // left 16 bits = y
+                        int pack_pos = dget((int)cartdata_index.overworld_pos_packed);
+
+                        if (pack_pos != 0)
+                        {
+                            // Isolate the x and y components of the 32 bit value.
+                            short unpacked_x = (short)(pack_pos & short.MaxValue);
+                            short unpacked_y = (short)(pack_pos >> 16);
+
+                            spawn_point.X = unpacked_x * 8.0f;
+                            spawn_point.Y = unpacked_y * 8.0f;
+                        }
+                        break;
+                    }
                 case game_state.gameplay_dead:
                     {
                         if (new_state == game_state.game_over)
