@@ -163,6 +163,3 @@
 #begin raw/test_map_hall_top.tmx
 /copy:raw/test_map_hall_top.tmx
 
-#begin raw/test_template.tx
-/copy:raw/test_template.tx
-
