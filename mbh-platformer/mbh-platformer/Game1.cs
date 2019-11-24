@@ -19,6 +19,17 @@ namespace mbh_platformer
     // WORKING ON:
     // Issue where you press into side of rock while it is going up, pulls player up.
     // See: "C:\Users\Matt\Documents\Mono8\Mono8_636902690048336832.gif"
+
+    /*
+mget_ex which returns tile object (with bank offset, etc).
+fget which takes tile object (and handles applying offset).
+
+At game level, call the new functions everywhere.
+
+Most calling function should probably go through all layers until fget returns non-zero
+Alternatively we can have all level information on layer 0, but that will make hiding things behind tiles
+impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for some checks like destructable rocks).
+     */
     public class Game1 : PicoXGame
     {
         public static Game1 inst;
