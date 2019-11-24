@@ -1220,7 +1220,7 @@ namespace mbh_platformer
                 if (ticks % 5 == 0)
                 {
                     x += dir * speed;// * (rnd(8) + 8);
-                    if (fget(mget(flr(x / 8.0f), flr(y / 8.0f)), 0) || !fget(mget(flr(x / 8.0f), flr(y / 8.0f) + 1), 0))
+                    if (fget(mget_tiledata(flr(x / 8.0f), flr(y / 8.0f)), 0) || !fget(mget_tiledata(flr(x / 8.0f), flr(y / 8.0f) + 1), 0))
                     {
                         inst.objs_remove_queue.Add(this);
                         return;
@@ -2173,7 +2173,7 @@ namespace mbh_platformer
                 int mx = flr(hit_point.X / 8.0f);
                 int my = flr(hit_point.Y / 8.0f);
 
-                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.no_bouce))
+                if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.no_bouce))
                 {
                     return;
                 }
@@ -2183,18 +2183,18 @@ namespace mbh_platformer
                 dy = -max_dy;
                 inst.objs_add_queue.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
 
-                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.vanishing))
+                if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.vanishing))
                 { 
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
                 }
-                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.arc))
+                if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.arc))
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
                     inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
-                if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.rock_smash) && inst.pc.has_artifact(artifacts.rock_smasher))
+                if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.rock_smash) && inst.pc.has_artifact(artifacts.rock_smasher))
                 {
                     inst.smash_rock(mx, my, true);
                 }
@@ -2443,7 +2443,7 @@ namespace mbh_platformer
                 //jump buttons
                 self.jump_button._update60();
 
-                bool in_water_new = (inst.is_packed_tile(fget(mget(flr(x / 8), flr(y / 8))), packed_tile_types.water));
+                bool in_water_new = (inst.is_packed_tile(fget(mget_tiledata(flr(x / 8), flr(y / 8))), packed_tile_types.water));
 
                 if (!in_water_new || controller.has_artifact(artifacts.air_tank))
                 {
@@ -2648,7 +2648,7 @@ namespace mbh_platformer
                 {
                     int cell_x = flr(((cx + h.Item1) / 8));
                     int cell_y = flr(((cy + h.Item2) / 8));
-                    if (inst.is_packed_tile(fget(mget(cell_x, cell_y)), packed_tile_types.spike))
+                    if (inst.is_packed_tile(fget(mget_tiledata(cell_x, cell_y)), packed_tile_types.spike))
                     {
                         // placeholder to do massive damage.
                         sprite temp = new sprite()
@@ -3144,7 +3144,7 @@ namespace mbh_platformer
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
 
-                if (fget(mget(flr((self.cx + (offset_x)) / 8), flr((self.cy + i) / 8)), 0))
+                if (fget(mget_tiledata(flr((self.cx + (offset_x)) / 8), flr((self.cy + i) / 8)), 0))
                 {
                     self.dx = 0;
                     self.x = (flr(((self.cx + (offset_x)) / 8)) * 8) + correction_x - (offset_x) - (self.cx_offset);
@@ -3162,7 +3162,7 @@ namespace mbh_platformer
             correction_x = 8.0f;
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
             {
-                if (fget(mget(flr((self.cx + (offset_x)) / 8), flr((self.cy + i) / 8)), 0))
+                if (fget(mget_tiledata(flr((self.cx + (offset_x)) / 8), flr((self.cy + i) / 8)), 0))
                 {
                     self.dx = 0;
                     self.x = (flr(((self.cx + (offset_x)) / 8)) * 8) + correction_x - (offset_x) - (self.cx_offset);
@@ -3260,7 +3260,7 @@ namespace mbh_platformer
 
                 var y = flr((box_y + box_h_half) / 8);
                 var y_actual = flr((self.y + box_h_half) / 8);
-                byte tile_flag = fget(mget(flr((box_x + i) / 8), y));
+                byte tile_flag = fget(mget_tiledata(flr((box_x + i) / 8), y));
                 if ((tile_flag & 1) << 0 != 0 || is_packed_tile(tile_flag, packed_tile_types.pass_through))
                 {
                     new_y = (flr(y) * 8) - box_h_half + (self.y - self.cy);
@@ -3342,7 +3342,7 @@ namespace mbh_platformer
 
             for (float i = -(offset_x); i <= (offset_x); i += 2)
             {
-                if (fget(mget(flr((self.cx + i) / 8), flr((self.cy - (offset_y)) / 8)), 0))
+                if (fget(mget_tiledata(flr((self.cx + i) / 8), flr((self.cy - (offset_y)) / 8)), 0))
                 {
                     self.dy = 0;
                     self.y = flr((self.cy - (offset_y)) / 8) * 8 + 8 + (offset_y) - self.cy_offset;
@@ -3492,7 +3492,7 @@ namespace mbh_platformer
                             }
                             int mx = map_x + x;
                             int my = map_y + y;
-                            if (inst.is_packed_tile(fget(mget(mx, my)), packed_tile_types.rock_smash))
+                            if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.rock_smash))
                             {
                                 inst.smash_rock(mx, my, true);
                             }
@@ -5071,10 +5071,10 @@ namespace mbh_platformer
                         //pal(5, 6);
                         //pal(0, 7);
                         apply_pal(get_cur_pal(false));
-                        bset(cur_map_bank);
+                        // Assume a max of 3 layers for now. Missing or "not visible" layers will not be rendered.
                         map(0, 0, 0, 0, 16, 16, 0, 0);
                         map(0, 0, 0, 0, 16, 16, 0, 1);
-                        //map(0, 0, 0, 0, 16, 16, 0, 2);
+                        map(0, 0, 0, 0, 16, 16, 0, 2);
                         bset(0);
                         pal();
                         //map(0, 0, 0, 0, 16, 16, 0, 1); // easy mode?
@@ -5401,7 +5401,7 @@ namespace mbh_platformer
 
         public override List<string> GetSheetPath()
         {
-            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2" };
+            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3" };
         }
 
         public override Dictionary<int, string> GetSoundEffectPaths()
@@ -5441,9 +5441,11 @@ namespace mbh_platformer
             return "";
         }
 
+        // note: we want to make sure the width and height at multiples of 16 to ensure tiles go right to the edge.
         public Vector2 Res = new Vector2(448, 240); // NES WS
         //public Vector2 Res = new Vector2(256, 240); // NES
         //public Vector2 Res = new Vector2(160, 144); // GB
+        //public Vector2 Res = new Vector2(256, 144); // GB WS
 
         public override Tuple<int, int> GetResolution() { return new Tuple<int, int>((int)Res.X, (int)Res.Y); }
 

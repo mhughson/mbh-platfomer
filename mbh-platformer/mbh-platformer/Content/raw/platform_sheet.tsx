@@ -3,7 +3,7 @@
  <properties>
   <property name="Bank" type="int" value="0"/>
  </properties>
- <image source="platformer_sheet.png" trans="000000" width="128" height="512"/>
+ <image source="platformer_sheet.png" trans="00e436" width="128" height="512"/>
  <tile id="834">
   <properties>
    <property name="Flag" type="int" value="5"/>
