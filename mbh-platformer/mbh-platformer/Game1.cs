@@ -5461,5 +5461,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         public override Tuple<int, int> GetResolution() { return new Tuple<int, int>((int)Res.X, (int)Res.Y); }
 
         public override int GetGifScale() { return 2; }
+
+        public override bool GetGifCaptureEnabled()
+        {
+            return true;
+        }
     }
 }
