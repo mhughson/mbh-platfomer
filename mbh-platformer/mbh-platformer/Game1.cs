@@ -4314,6 +4314,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         List<PicoXObj> objs_add_queue;
 
         game_state cur_game_state;
+        game_state prev_game_state;
         uint time_in_state;
         // TODO: why am I not just using the BufferedKey?
         complex_button start_game;
@@ -4712,24 +4713,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 case game_state.main_menu:
                     {
-                        // The only state currently using the ui_scene is the main menu.
-                        // Eventually this might need to be more intellegent about when
-                        // and what gets cleared.
-                        ui_scene.clear_children();
-
-                        // right 16 bits = x
-                        // left 16 bits = y
-                        int pack_pos = dget((int)cartdata_index.overworld_pos_packed);
-
-                        if (pack_pos != 0)
-                        {
-                            // Isolate the x and y components of the 32 bit value.
-                            short unpacked_x = (short)(pack_pos & short.MaxValue);
-                            short unpacked_y = (short)(pack_pos >> 16);
-
-                            spawn_point.X = unpacked_x * 8.0f;
-                            spawn_point.Y = unpacked_y * 8.0f;
-                        }
                         break;
                     }
                 case game_state.gameplay_dead:
@@ -4762,6 +4745,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         }
                         break;
                     }
+            }
+
+            // When transitioning levels, we go through these transient "level_trans" states, but when we come out of
+            // it we need to know what "core" state we came from because entering gameplay from the main menu is different from
+            // entering gameplay from gameover, for instance.
+            if (new_state != game_state.level_trans_enter && new_state != game_state.level_trans_exit)
+            {
+                prev_game_state = cur_game_state;
             }
 
             cur_game_state = new_state;
@@ -4804,6 +4795,27 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
                 case game_state.level_trans_enter:
                     {
+                        if (prev_game_state == game_state.main_menu)
+                        {
+                            // The only state currently using the ui_scene is the main menu.
+                            // Eventually this might need to be more intelligent about when
+                            // and what gets cleared.
+                            ui_scene.clear_children();
+
+                            // right 16 bits = x
+                            // left 16 bits = y
+                            int pack_pos = dget((int)cartdata_index.overworld_pos_packed);
+
+                            if (pack_pos != 0)
+                            {
+                                // Isolate the x and y components of the 32 bit value.
+                                short unpacked_x = (short)(pack_pos & short.MaxValue);
+                                short unpacked_y = (short)(pack_pos >> 16);
+
+                                spawn_point.X = unpacked_x * 8.0f;
+                                spawn_point.Y = unpacked_y * 8.0f;
+                            }
+                        }
                         initialize_map(ref spawn_point, false);
                         break;
                     }
