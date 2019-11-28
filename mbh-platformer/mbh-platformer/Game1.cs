@@ -2676,6 +2676,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 self.jump_button._update60();
 
                 bool in_water_new = (inst.is_packed_tile(fget(mget_tiledata(flr(x / 8), flr(y / 8))), packed_tile_types.water));
+                bool head_in_water_new = (inst.is_packed_tile(fget(mget_tiledata(flr(x / 8), flr(y / 8) - 1)), packed_tile_types.water));
 
                 if (!in_water_new || controller.has_artifact(artifacts.air_tank))
                 {
@@ -2690,7 +2691,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         y = flr(y / 16) * 16.0f - 8.0f,
                     });
                 }
-                if (in_water_new && !controller.has_artifact(artifacts.air_tank))
+                if (head_in_water_new && !controller.has_artifact(artifacts.air_tank))
                 {
                     in_water_timer++;
                     if (in_water_timer > time_before_water_damage_start)
