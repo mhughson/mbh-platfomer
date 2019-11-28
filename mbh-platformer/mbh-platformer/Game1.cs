@@ -139,6 +139,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             protected List<ui_widget> children = new List<ui_widget>();
             public float x;
             public float y;
+            protected bool has_focus;
 
             public virtual ui_widget add_child(ui_widget new_child)
             {
@@ -159,15 +160,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     c.draw_relative(x + px, y + py);
                 }
             }
-
+            
             public virtual void on_focus_received()
             {
-
+                has_focus = true;
             }
 
             public virtual void on_focus_lost()
             {
-
+                has_focus = false;
             }
 
             public override void _draw()
@@ -185,7 +186,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
-        // Hard coded implemation of main menu. Need to generalize to take callback
+        // Hard coded implementation of main menu. Need to generalize to take callback
         // functions per child, etc.
         public class ui_menu_scene : ui_widget
         {
@@ -232,13 +233,77 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class ui_menu_scene_list_item : ui_widget
+        {
+            public Action on_action_delegate;
+
+            public override void draw_relative(float px, float py)
+            {
+                base.draw_relative(px, py);
+
+                if (has_focus)
+                {
+                    float fx = x + px;
+                    float fy = y + py;
+                    rectfill(fx - 8, fy, fx - 4, fy + 4, 5);
+                }
+            }
+        }
+
+        public class ui_menu_scene_list : ui_widget
+        {
+            public Action on_close_delegate;
+
+            int cur_index = 0;
+
+            public override ui_widget add_child(ui_widget new_child)
+            {
+                System.Diagnostics.Debug.Assert(new_child as ui_menu_scene_list_item != null);
+
+                return base.add_child(new_child);
+            }
+
+            public override void _update60()
+            {
+                if (children.Count > 0)
+                {
+                    int new_index = cur_index;
+                    // up
+                    if (btnp(2))
+                    {
+                        new_index = (int)max(0, cur_index - 1);
+                    }
+                    // down
+                    if (btnp(3))
+                    {
+                        new_index = (int)min(children.Count - 1, cur_index + 1);
+                    }
+
+                    if (btnp(4))
+                    {
+                        on_close_delegate?.Invoke();
+                    }
+                    else if (btnp(5))
+                    {
+                        (children[cur_index] as ui_menu_scene_list_item).on_action_delegate?.Invoke();
+                    }
+
+                    //if (cur_index != new_index)
+                    {
+                        children[cur_index].on_focus_lost();
+                        children[new_index].on_focus_received();
+                        cur_index = new_index;
+                    }
+                }
+            }
+        }
+
         public class ui_text : ui_widget
         {
             public string display_string;
             public bool outline;
             public int color;
             public int color_outline;
-            bool has_focus;
 
             public override void draw_relative(float px, float py)
             {
@@ -260,18 +325,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     print(display_string, fx, fy, color);
                 }
-            }
-
-            public override void on_focus_received()
-            {
-                base.on_focus_received();
-                has_focus = true;
-            }
-
-            public override void on_focus_lost()
-            {
-                base.on_focus_lost();
-                has_focus = false;
             }
         }
 
@@ -4079,6 +4132,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     if (landing_queued)
                     {
+                        if(mfget(flr(x / 8), flr(y / 8), 0, 1))
+                        {
+                            landing_queued = false;
+                            return false;
+                        }
                         old_pawn.x = old_pawn.dest_x = x;
                         old_pawn.y = old_pawn.dest_y = y;
                         inst.pc.possess(old_pawn);
@@ -4122,8 +4180,19 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 else if (ticks_unpossed > 0 && inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
                     int gem_count = inst.pc.get_gem_count();
-                    if (btnp(4))
+                    if (btnp(4) && inst.message == null)
                     {
+
+                        //ui_box bg = new ui_box() { x = inst.Res.X * 0.5f - 32, y = inst.Res.Y * 0.5f - 32, width = 64, height = 64, color = 0, fill = true };
+                        //ui_menu_scene_list rocket_menu = new ui_menu_scene_list() { x = inst.Res.X * 0.5f, y = inst.Res.Y * 0.5f };
+                        ////ui_widget container = new ui_widget() { x = inst.Res.X * 0.5f, y = inst.Res.Y * 0.5f };
+                        //ui_menu_scene_list_item fly_ship_item = new ui_menu_scene_list_item().add_child(new ui_text() { display_string = "fly", color = 7 }) as ui_menu_scene_list_item;
+                        //ui_menu_scene_list_item leave_planet_item = new ui_menu_scene_list_item() { y = 6 }.add_child(new ui_text() { display_string = "win", color = 7 }) as ui_menu_scene_list_item;
+
+                        //rocket_menu.add_child(fly_ship_item).add_child(leave_planet_item);
+
+                        //inst.ui_scene.add_child(bg).add_child(rocket_menu);
+
                         if (gem_count >= gems_required_to_fly)
                         {
                             old_pawn = inst.pc.pawn as player_top;
@@ -4136,7 +4205,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_fly.ToString() + " gems required to fly...");
                         }
                     }
-                    if (btnp(5))
+                    else if (btnp(5) && inst.message == null)
                     {
                         if (gem_count >= gems_required_to_win)
                         {
@@ -4160,7 +4229,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public override void _draw()
             {
-                inst.apply_pal(inst.fade_table[3]);
+                // TODO: use sprfxset for dynamic shadow effect.
+                inst.apply_pal(inst.shadow_pal);
                 base._draw();
                 pal();
                 float temp_y = y;
@@ -4346,6 +4416,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public string title { get; private set; }
 
             public Action on_close_delegate;
+
+            public bool open_this_frame = true;
 
             public void set_message(string title, string body, Action on_close = null)
             {
@@ -4873,6 +4945,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             new int[] { 6, 1, 2, 3, 4, 7, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
             new int[] { 7, 1, 2, 3, 4, 7, 7, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, // brightest
         };
+        public int[] shadow_pal = new int[16] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, };
         // blue tint
         public int[] default_pal_invert_fg = new int[] { 0, 1, 2, 3, 4, 13, 12, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         // red tint
@@ -5210,15 +5283,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             if (message != null)
             {
-                if (btnp(4) || btnp(5))
-                {
-                    message.on_close_delegate?.Invoke();
-                    message = null;
-                }
-                else
-                {
-                    hit_pause.start_pause(hit_pause_manager.pause_reason.message_box_open);
-                }
+                hit_pause.start_pause(hit_pause_manager.pause_reason.message_box_open);
+                message.open_this_frame = false;
             }
 
             // TODO: Should we ignore objects in the remove queue?
@@ -5249,6 +5315,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             if (hit_pause != null)
             {
                 hit_pause._update60();
+            }
+
+            if (message != null && !message.open_this_frame)
+            {
+                if (btnp(4) || btnp(5))
+                {
+                    message.on_close_delegate?.Invoke();
+                    message = null;
+                }
             }
 
             ui_scene._update60();
