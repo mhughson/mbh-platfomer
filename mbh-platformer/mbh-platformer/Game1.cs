@@ -4997,6 +4997,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         BufferedKey toggle_artifact_03 = new BufferedKey(Keys.D4);
         BufferedKey toggle_artifact_04 = new BufferedKey(Keys.D5);
         BufferedKey toggle_artifact_05 = new BufferedKey(Keys.D6);
+        BufferedKey toggle_all_gems = new BufferedKey(Keys.D0);
 
         public class map_config
         {
@@ -5114,6 +5115,18 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             if (toggle_artifact_05.Update())
             {
                 inst.pc.found_artifacts ^= artifacts.air_tank;
+            }
+
+            if (toggle_all_gems.Update())
+            {
+                if (inst.pc.found_gems > 0)
+                {
+                    inst.pc.found_gems = 0;
+                }
+                else
+                {
+                    inst.pc.found_gems = int.MaxValue;
+                }
             }
 #endif
 
