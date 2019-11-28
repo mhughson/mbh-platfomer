@@ -208,7 +208,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         new_index = (int)min(children.Count - 1, cur_index + 1);
                     }
 
-                    if (btnp(4) || btnp(5))
+                    if (inst.btnp_confirm())
                     {
                         if (cur_index == 0)
                         {
@@ -283,7 +283,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     {
                         on_close_delegate?.Invoke();
                     }
-                    else if (btnp(5))
+                    else if (inst.btnp_confirm())
                     {
                         (children[cur_index] as ui_menu_scene_list_item).on_action_delegate?.Invoke();
                     }
@@ -5076,6 +5076,16 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             print(str, startx, starty, col);
         }
 
+        public bool btn_confirm()
+        {
+            return btn(4) || btn(6);
+        }
+
+        public bool btnp_confirm()
+        {
+            return btnp(4) || btnp(6);
+        }
+
 
         List<Tuple<string /*label*/, string/*value*/>> debug_map_list;
         int cur_debug_map = -1;
@@ -5336,7 +5346,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             if (message != null && !message.open_this_frame)
             {
-                if (btnp(4) || btnp(5))
+                if (btnp_confirm())
                 {
                     message.on_close_delegate?.Invoke();
                     message = null;
@@ -5813,6 +5823,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         public override bool GetGifCaptureEnabled()
         {
             return true;
+        }
+
+        public override bool GetPauseMenuEnabled()
+        {
+            return false;
         }
     }
 }
