@@ -1815,6 +1815,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             string next_idle = "down";
 
+            public virtual bool on_reached_destination()
+            {
+                return false;
+            }
+
             public override void _update60()
             {
                 base._update60();
@@ -1878,8 +1883,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 const float tile_size = 16;
 
-                // Arrived at tile.
-                if (dest_x == x && dest_y == y)
+                // Arrived at tile and not being handled by derived class.
+                if (dest_x == x && dest_y == y && !on_reached_destination())
                 {
                     bool new_dest = false;
 
@@ -3944,12 +3949,12 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public class rocket_ship : player_top
         {
-            bool hit = false;
             player_top old_pawn;
             int ticks_possesed = 0;
             int ticks_unpossed = 999; // start "fully possessed"
             int gems_required_to_fly = 8;
             int gems_required_to_win = 13;
+            bool landing_queued = false;
 
             public rocket_ship()
             {
@@ -4068,20 +4073,17 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 is_flying = true;
             }
 
-            public override void _update60()
+            public override bool on_reached_destination()
             {
-                base._update60();
-
-                if (this == inst.pc.pawn)
+                if (!base.on_reached_destination())
                 {
-                    if (btnp(4) && ticks_possesed > 1)
+                    if (landing_queued)
                     {
-//                        Point meta = inst.map_pos_to_meta_tile(flr(x/8.0f), flr(y/8.0f));
                         old_pawn.x = old_pawn.dest_x = x;
                         old_pawn.y = old_pawn.dest_y = y;
                         inst.pc.possess(old_pawn);
 
-                        Int32 packed_pos = flr(dest_x/8.0f) | (flr(dest_y/8.0f) << 16);
+                        Int32 packed_pos = flr(dest_x / 8.0f) | (flr(dest_y / 8.0f) << 16);
                         dset((int)cartdata_index.ship_map_pos_packed, packed_pos);
 
                         // Save the player pos too.
@@ -4090,28 +4092,35 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                         old_pawn = null;
                         ticks_unpossed = 0;
+
+                        landing_queued = false;
+
+                        // handled.
+                        return true;
+                    }
+                }
+
+                // unhandled.
+                return false;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (this == inst.pc.pawn)
+                {
+                    if (btnp(4) && ticks_possesed > 1)
+                    {
+                        // queue up the landing but wait to reach destination.
+                        landing_queued = true;
                     }
 
                     ticks_possesed++;
                 }
-                else if (inst.intersects_obj_obj(this, inst.pc.pawn))
+                // Make sure we didn't just exit the ship this frame (in base update).
+                else if (ticks_unpossed > 0 && inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
-                    if (hit == false)
-                    {
-
-                        //// todo: count gems found.
-                        //// temp hack. 1111 0000 is all found gems on level id 1 (pit with water).
-                        //if (inst.pc.found_gems >= 0xf0)
-                        //{
-                        //    inst.message = new message_box();
-                        //    inst.message.set_message("title", "ship powers up, and lift off!", () => { inst.set_game_state(game_state.game_win); });
-                        //}
-                        //else
-                        //{
-                        //    inst.message = new message_box();
-                        //    inst.message.set_message("title", "more goodies needed!");
-                        //}
-                    }
                     int gem_count = inst.pc.get_gem_count();
                     if (btnp(4))
                     {
@@ -4140,11 +4149,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             inst.message.set_message("title", gem_count.ToString() + "/" + gems_required_to_win.ToString() + " gems required to leave planet...");
                         }
                     }
-                    hit = true;
-                }
-                else
-                {
-                    hit = false;
                 }
 
                 // Not in the ship.
