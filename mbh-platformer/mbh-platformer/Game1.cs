@@ -4137,6 +4137,20 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             landing_queued = false;
                             return false;
                         }
+
+                        foreach(PicoXObj o in inst.objs)
+                        {
+                            map_link link = o as map_link;
+                            if (link != null)
+                            {
+                                if (inst.intersects_obj_obj(this, link))
+                                {
+                                    landing_queued = false;
+                                    return false;
+                                }
+                            }
+                        }
+
                         old_pawn.x = old_pawn.dest_x = x;
                         old_pawn.y = old_pawn.dest_y = y;
                         inst.pc.possess(old_pawn);
