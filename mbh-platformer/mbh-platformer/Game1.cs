@@ -2717,7 +2717,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 //multiple frames.
                 //if (!is_dashing)
 
-                int mod_max_jump_press = in_water ? max_jump_press * 4 : max_jump_press;
+                // Check dy for the case when the player is landing in water. We don't want the max hold to suddenly jump up
+                // because that will trigger them to start moving up again, even if they are already falling.
+                int mod_max_jump_press = in_water && dy < 0 ? max_jump_press * 4 : max_jump_press;
                 float mod_jump_speed = in_water ? jump_speed * 1.0f : jump_speed;
 
                 {
