@@ -134,6 +134,169 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class ui_widget : PicoXObj
+        {
+            protected List<ui_widget> children = new List<ui_widget>();
+            public float x;
+            public float y;
+
+            public virtual ui_widget add_child(ui_widget new_child)
+            {
+                children.Add(new_child);
+                return this;
+            }
+
+            public virtual void clear_children()
+            {
+                children.Clear();
+            }
+
+            public virtual void draw_relative(float px, float py)
+            {
+                // No base implementation of draw beyond drawing children.
+                foreach(var c in children)
+                {
+                    c.draw_relative(x + px, y + py);
+                }
+            }
+
+            public virtual void on_focus_received()
+            {
+
+            }
+
+            public virtual void on_focus_lost()
+            {
+
+            }
+
+            public override void _draw()
+            {
+                draw_relative(0, 0);
+            }
+
+            public override void _update60()
+            {
+                // c-style loop so that clearing the list while iterating doesn't crash.
+                for(int i = 0; i < children.Count; i++)
+                {
+                    children[i]._update60();
+                }
+            }
+        }
+
+        // Hard coded implemation of main menu. Need to generalize to take callback
+        // functions per child, etc.
+        public class ui_menu_scene : ui_widget
+        {
+            int cur_index = 1;
+
+            public override void _update60()
+            {
+                if (children.Count > 0)
+                {
+                    int new_index = cur_index;
+                    // up
+                    if (btnp(2))
+                    {
+                        new_index = (int)max(0, cur_index - 1);
+                    }
+                    // down
+                    if (btnp(3))
+                    {
+                        new_index = (int)min(children.Count - 1, cur_index + 1);
+                    }
+
+                    if (btnp(4) || btnp(5))
+                    {
+                        if (cur_index == 0)
+                        {
+                            // Clear the save game...
+                            for (uint i = 0; i < 64; i++)
+                            {
+                                dset(i, 0);
+                            }
+                            inst.pc.reload();
+                        }
+                        inst.queued_map = "Content/raw/map_ow_top.tmx";
+                        inst.set_game_state(game_state.level_trans_exit);
+                    }
+
+                    //if (cur_index != new_index)
+                    {
+                        children[cur_index].on_focus_lost();
+                        children[new_index].on_focus_received();
+                        cur_index = new_index;
+                    }
+                }
+            }
+        }
+
+        public class ui_text : ui_widget
+        {
+            public string display_string;
+            public bool outline;
+            public int color;
+            public int color_outline;
+            bool has_focus;
+
+            public override void draw_relative(float px, float py)
+            {
+                base.draw_relative(px, py);
+
+                float fx = x + px;
+                float fy = y + py;
+
+                if (has_focus)
+                {
+                    rectfill(fx - 8, fy, fx - 4, fy + 4, color);
+                }
+
+                if (outline)
+                {
+                    inst.printo(display_string, fx, fy, color, color_outline);
+                }
+                else
+                {
+                    print(display_string, fx, fy, color);
+                }
+            }
+
+            public override void on_focus_received()
+            {
+                base.on_focus_received();
+                has_focus = true;
+            }
+
+            public override void on_focus_lost()
+            {
+                base.on_focus_lost();
+                has_focus = false;
+            }
+        }
+
+        public class ui_box : ui_widget
+        {
+            public float width;
+            public float height;
+            public int color;
+            public bool fill;
+
+            public override void draw_relative(float px, float py)
+            {
+                base.draw_relative(px, py);
+
+                if (fill)
+                {
+                    rectfill(x + px, y + py, x + px + width, y + py + height, color);
+                }
+                else
+                {
+                    rect(x + px, y + py, x + px + width, y + py + height, color);
+                }
+            }
+        }
+
         public class sprite : PicoXObj
         {
             public class flying_def
@@ -1816,16 +1979,16 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 base._update60();
 
-                pawn._update60();
+                pawn?._update60();
             }
 
             public override void _draw()
             {
                 base._draw();
 
-                pawn.push_pal();
-                pawn._draw();
-                pawn.pop_pal();
+                pawn?.push_pal();
+                pawn?._draw();
+                pawn?.pop_pal();
             }
 
             public virtual void possess(player_pawn p)
@@ -2924,7 +3087,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
             public void jump_to_target()
             {
-                pos = new Vector2(tar.pawn.x, tar.pawn.y);
+                if (tar.pawn != null)
+                {
+                    pos = new Vector2(tar.pawn.x, tar.pawn.y);
+                }
             }
             public override void _update60()
             {
@@ -2936,29 +3102,33 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 float max_cam_speed = 8.0f;
 
-                //follow target outside of
-                //pull range.
-                if (pull_max_x() < self.tar.pawn.x)
+                if (self.tar.pawn != null)
                 {
 
-                    self.pos.X += min(self.tar.pawn.x - pull_max_x(), max_cam_speed);
+                    //follow target outside of
+                    //pull range.
+                    if (pull_max_x() < self.tar.pawn.x)
+                    {
 
-                }
-                if (pull_min_x() > self.tar.pawn.x)
-                {
-                    self.pos.X += min((self.tar.pawn.x - pull_min_x()), max_cam_speed);
-                }
+                        self.pos.X += min(self.tar.pawn.x - pull_max_x(), max_cam_speed);
+
+                    }
+                    if (pull_min_x() > self.tar.pawn.x)
+                    {
+                        self.pos.X += min((self.tar.pawn.x - pull_min_x()), max_cam_speed);
+                    }
 
 
-                if (pull_max_y() < self.tar.pawn.y)
-                {
-                    self.pos.Y += min(self.tar.pawn.y - pull_max_y(), max_cam_speed);
+                    if (pull_max_y() < self.tar.pawn.y)
+                    {
+                        self.pos.Y += min(self.tar.pawn.y - pull_max_y(), max_cam_speed);
 
-                }
-                if (pull_min_y() > self.tar.pawn.y)
-                {
-                    self.pos.Y += min((self.tar.pawn.y - pull_min_y()), max_cam_speed);
+                    }
+                    if (pull_min_y() > self.tar.pawn.y)
+                    {
+                        self.pos.Y += min((self.tar.pawn.y - pull_min_y()), max_cam_speed);
 
+                    }
                 }
 
                 //lock to edge
@@ -4256,7 +4426,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             int gem_id = 0;
 
-            cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
+            if (TmxMapData.Properties.ContainsKey("level_id"))
+            {
+                cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
+            }
+            else
+            {
+                cur_level_id = -1;
+            }
 
             if (TmxMapData.Properties.ContainsKey("darkness_level"))
             {
@@ -4535,6 +4712,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 case game_state.main_menu:
                     {
+                        // The only state currently using the ui_scene is the main menu.
+                        // Eventually this might need to be more intellegent about when
+                        // and what gets cleared.
+                        ui_scene.clear_children();
+
                         // right 16 bits = x
                         // left 16 bits = y
                         int pack_pos = dget((int)cartdata_index.overworld_pos_packed);
@@ -4588,6 +4770,27 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             // Entering...
             switch (cur_game_state)
             {
+                case game_state.main_menu:
+                    {
+                        // display the title screen map.
+                        queued_map = current_map = "Content/raw/map_title_00.tmx";
+                        initialize_map(ref spawn_point, false);
+
+                        // main menu
+                        ui_scene.add_child
+                        (
+                            new ui_menu_scene() { x = Res.X * 0.5f - 14.0f, y = Res.Y * 0.75f }
+                            .add_child
+                            (
+                                new ui_text() { display_string = "new game", color = 7, color_outline = 5, outline = true }
+                            )
+                            .add_child
+                            (
+                                new ui_text() { display_string = "continue", color = 7, color_outline = 5, outline = true, y = 8 }
+                            )
+                        );
+                        break;
+                    }
                 case game_state.game_win:
                     {
                         objs.Clear();
@@ -4790,6 +4993,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public map_config cur_map_config = new map_config();
 
+        // A global scene used for displaying all ui_widgets. This an empty root.
+        ui_widget ui_scene;
+
         public override void _init()
         {
             debug_map_list = populate_map_list();
@@ -4827,8 +5033,27 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             pc = new player_controller();
             start_game = new complex_button(4);
             hit_pause = new hit_pause_manager();
-            cur_game_state = game_state.main_menu;
-            reloadmap("");
+            
+            ui_scene = new ui_widget();
+            //ui_scene.
+            //    add_child
+            //    (
+            //        new ui_widget() { x = 32, y = 32 }.
+            //        add_child
+            //        (
+            //            new ui_box() {x = -2, y = -2, width = 40, height = 16, color = 5 }
+            //        ).
+            //        add_child
+            //        (
+            //            new ui_text() { color = 7, display_string = "new game" }
+            //        ).
+            //        add_child
+            //        (
+            //            new ui_text() { color = 7, y = 8, display_string = "continue"}
+            //        )
+            //    );
+
+            set_game_state(game_state.main_menu);
         }
 
         public override void _update60()
@@ -4882,14 +5107,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             switch (cur_game_state)
             {
-                case game_state.main_menu:
-                    {
-                        if (start_game.is_released)
-                        {
-                            set_game_state(game_state.level_trans_enter);
-                        }
-                        break;
-                    }
                 case game_state.level_trans_exit:
                     {
                         hit_pause.start_pause(hit_pause_manager.pause_reason.level_trans);
@@ -5005,6 +5222,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 hit_pause._update60();
             }
 
+            ui_scene._update60();
+
             if (queued_map != GetMapString() && cur_game_state != game_state.level_trans_exit && cur_game_state != game_state.level_trans_enter)
             {
                 set_game_state(game_state.level_trans_exit);
@@ -5072,6 +5291,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             switch (cur_game_state)
             {
+                case game_state.main_menu:
                 case game_state.level_trans_exit:
                 case game_state.level_trans_enter:
                 case game_state.gameplay:
@@ -5257,6 +5477,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             Action draw_hud = () =>
             {
+                if (pc == null || pc.pawn == null)
+                {
+                    return;
+                }
                 //apply_pal(get_cur_pal(false));
                 rectfill(0, 0, Res.X, 15, 7);
                 draw_health();
@@ -5269,10 +5493,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 case game_state.main_menu:
                     {
-                        var str = "dash maximus";
-                        print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, Res.Y * 0.5f, 7);
-                        str = "-dx-";
-                        print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, Res.Y * 0.5f + 6, 7);
+                        //var str = "dash maximus";
+                        //print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, Res.Y * 0.5f, 7);
+                        //str = "-dx-";
+                        //print(str, (Res.X * 0.5f) - (str.Length * 0.5f) * 4, Res.Y * 0.5f + 6, 7);
                         break;
                     }
                 case game_state.gameplay:
@@ -5369,6 +5593,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     print(message.body_with_breaks[i], x + 3, (y + 3) + (i * 6), 7);
                 }
             }
+
+            // Drawn in "hud-space" for the time being.
+            ui_scene._draw();
 
             if (debug_draw_enabled)
             {

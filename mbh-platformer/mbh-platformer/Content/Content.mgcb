@@ -73,6 +73,9 @@
 #begin raw/map_ss_vert_template.tmx
 /copy:raw/map_ss_vert_template.tmx
 
+#begin raw/map_title_00.tmx
+/copy:raw/map_title_00.tmx
+
 #begin raw/pico8_font.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -177,4 +180,7 @@
 
 #begin raw/test_map_hall_top.tmx
 /copy:raw/test_map_hall_top.tmx
+
+#begin raw/test_template.tx
+/copy:raw/test_template.tx
 

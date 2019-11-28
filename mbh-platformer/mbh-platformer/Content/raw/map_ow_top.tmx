@@ -793,7 +793,7 @@
     <property name="type" value="top"/>
    </properties>
   </object>
-  <object id="6" name="ship" type="spawn_rocket_ship" x="1040" y="904" width="32" height="32"/>
+  <object id="6" name="ship" type="spawn_rocket_ship" x="1040" y="912" width="32" height="32"/>
   <object id="8" type="map_link" x="1008" y="888" width="16" height="16">
    <properties>
     <property name="dest_map_path" value="Content/raw/map_ss_alpha_00.tmx"/>
