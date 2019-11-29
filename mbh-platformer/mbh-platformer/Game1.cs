@@ -401,7 +401,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
 
             static public int[] create_anim_frame(int start_sprite, int w, int h, int zeroed_rows_at_top = 0)
-            {
+             {
                 int[] frame = new int[w * h];
                 int count = 0;
                 for (int j = 0; j < h; j++)
@@ -1701,9 +1701,189 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (tick >= 0.5f)
                 {
-                    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 });
+                    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 }, 0);
                     inst.objs_remove_queue.Add(this);
                 }
+
+                // Should be handled by collide side.
+                //if (inst.p.pawn.dash_time > 0 && inst.intersects_obj_obj(this, inst.p.pawn))
+                //{
+                //    Vector2 v = new Vector2(x - (x - inst.p.pawn.x) * 0.5f, y - (y - inst.p.pawn.y) * 0.5f);
+                //    inst.p.pawn.start_dash_bounce(ref v);
+                //}
+            }
+        }
+
+        public class platform : sprite
+        {
+            protected float tick_x = 0;
+            protected float tick_y = 0;
+            protected bool hit_this_frame = false;
+            int dist_tiles_x;
+            int dist_tiles_y;
+            float mid_x;
+            float mid_y;
+
+            float dir_x;
+            float dir_y;
+            int ticks_per_dir_x;
+            int ticks_per_dir_y;
+            float linear_speed;
+
+            public enum movement_style
+            {
+                smooth = 0,
+                linear = 1,
+            }
+            movement_style move_style;
+
+            public platform(float x, float y, int width_tiles, int dist_tiles_x, int dist_tiles_y, movement_style move_style)
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                               new int[width_tiles * 2]
+                            }
+                        }
+                    },
+                };
+
+                for (int i = 0; i < anims["default"].frames[0].Length; i+=2)
+                {
+                    if (i < anims["default"].frames[0].Length / 2)
+                    {
+                        anims["default"].frames[0][i] = 864;
+                        anims["default"].frames[0][i+1] = 865;
+                    }
+                    else
+                    {
+                        anims["default"].frames[0][i] = 880;
+                        anims["default"].frames[0][i+1] = 881;
+                    }
+                    //{ 864, 865, 864, 865, 864, 865, 864, 865, 880, 881, 880, 881, 880, 881, 880, 881, }
+                }
+
+                set_anim("default");
+
+                w = width_tiles * 8;
+                h = 2 * 8;
+                cw = width_tiles * 8;
+                ch = 2 * 8;
+
+                this.x = x_initial = x;
+                this.y = y_initial = y;
+
+                this.dist_tiles_x = dist_tiles_x;
+                this.dist_tiles_y = dist_tiles_y;
+
+                mid_x = x + (dist_tiles_x * 8.0f * 0.5f);
+                mid_y = y + (dist_tiles_y * 8.0f * 0.5f);
+
+                dir_x = Math.Sign(dist_tiles_x);
+                dir_y = Math.Sign(dist_tiles_y);
+
+                linear_speed = 0.5f;
+                ticks_per_dir_x = flr(abs((dist_tiles_x * 8.0f) / linear_speed));
+                ticks_per_dir_y = flr(abs((dist_tiles_y * 8.0f) / linear_speed));
+
+                this.move_style = move_style;
+
+                is_platform = true;
+            }
+
+            public override void _update60()
+            {
+                
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                var self = this;
+
+                hit_this_frame = false;
+
+                // TODO: Error - This assumes a collision means you are standing on top!
+                var touching_player = inst.intersects_box_box(inst.pc.pawn.cx, inst.pc.pawn.cy + inst.pc.pawn.ch * 0.5f, inst.pc.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                //var touching_player = inst.intersects_obj_obj(self, inst.p.pawn);
+
+                var old_x = self.x;
+
+                var old_y = self.y;
+
+                //base._update60();
+
+                switch (move_style)
+                {
+                    case movement_style.smooth:
+                        {
+
+                            float speed = 0.001f;
+
+                            //y = 964 - (cos(tick) * 64.0f);
+                            //y = 964;// - (cos(tick) * 64.0f);
+                            x = mid_x + -cos(tick_x * speed) * (dist_tiles_x * 4.0f); //80 - (cos(tick) * 64.0f);
+                            y = mid_y + -cos(tick_y * speed) * (dist_tiles_y * 4.0f); //80 - (cos(tick) * 64.0f);
+
+                            //y += (sin(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
+
+                            tick_x += 1;
+                            tick_y += 1;
+
+                            //x += 1.0f;
+                            break;
+                        }
+
+                    case movement_style.linear:
+                        {
+                            x += dir_x * linear_speed;
+                            y += dir_y * linear_speed;
+
+                            tick_x++;
+                            tick_y++;
+
+                            if (tick_x >= ticks_per_dir_x)
+                            {
+                                dir_x *= -1;
+                                tick_x = 0;
+                            }
+                            if (tick_y >= ticks_per_dir_y)
+                            {
+                                dir_y *= -1;
+                                tick_y = 0;
+                            }
+
+                            break;
+                        }
+                }
+
+                if (touching_player)
+                {
+                    hit_this_frame = true;
+                    inst.pc.pawn.x += self.x - old_x;
+                    inst.pc.pawn.y += self.y - old_y;
+
+                    //inst.p.pawn.dx = self.x - old_x;
+                    //inst.p.pawn.dy = self.y - old_y;
+
+                    //inst.p.pawn.platformed = true;
+                }
+                else
+                {
+                    inst.pc.pawn.platformed = false;
+                }
+
+                //if (tick >= 0.5f)
+                //{
+                //    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 }, 0);
+                //    inst.objs_remove_queue.Add(this);
+                //}
 
                 // Should be handled by collide side.
                 //if (inst.p.pawn.dash_time > 0 && inst.intersects_obj_obj(this, inst.p.pawn))
@@ -2428,12 +2608,12 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.vanishing))
                 {
-                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
                     inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
                 }
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.arc))
                 {
-                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
                     inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
@@ -3706,7 +3886,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (time_remaining <= 0)
                 {
-                    inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851 });
+                    inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851 }, 0);
                     inst.objs_remove_queue.Add(this);
                 }
             }
@@ -3776,7 +3956,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         });
                 }
             }
-            inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
+            inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
 
             if (with_explode)
             {
@@ -4685,6 +4865,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                                 }
                             );
                     }
+                    else if (string.Compare(o.Type, "spawn_platform", true) == 0)
+                    {
+                        string dist_x_string = "0";
+                        o.Properties.TryGetValue("dist_x", out dist_x_string);
+                        string dist_y_string = "0";
+                        o.Properties.TryGetValue("dist_y", out dist_y_string);
+                        platform p = new platform((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f), (int)(o.Width / 8.0f), int.Parse(dist_x_string), int.Parse(dist_y_string), platform.movement_style.linear);
+                        objs_add_queue.Add(p);
+                    }
                     else if (string.Compare(o.Type, "map_link", true) == 0)
                     {
                         map_link ml = new map_link()
@@ -4936,7 +5125,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             return new Point(x, y);
         }
 
-        public void change_meta_tile(int x, int y, int[] t)
+        public void change_meta_tile(int x, int y, int[] t, int bank)
         {
             Point final_pos = map_pos_to_meta_tile(x, y);
             x = final_pos.X;
@@ -4948,15 +5137,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 for (int i = 0; i <= 1; i++)
                 {
-                    mset(x + i, y + j, t[count]);
+                    msetbank(x + i, y + j, t[count], bank);
                     count += 1;
                 }
             }
         }
 
-        public void change_meta_tile(int x, int y, int tile_id)
+        public void change_meta_tile(int x, int y, int tile_id, int bank)
         {
-            change_meta_tile(x, y, new int[] { tile_id, tile_id, tile_id, tile_id });
+            change_meta_tile(x, y, new int[] { tile_id, tile_id, tile_id, tile_id }, bank);
         }
 
         public int[] default_pal = new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
