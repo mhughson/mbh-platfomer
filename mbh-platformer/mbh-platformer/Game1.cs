@@ -389,6 +389,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             protected int invul_time = 0;
             protected int invul_time_on_hit = 120;
 
+            public int bank = 0;
+
             public struct anim
             {
                 public int ticks;
@@ -500,6 +502,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 var self = this;
                 base._draw();
+
+                inst.bset(bank);
 
                 if (anims != null && !String.IsNullOrEmpty(curanim))
                 {
@@ -2341,7 +2345,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             {
                                 create_anim_frame(160, 4, 3),
                                 create_anim_frame(164, 4, 3),
-                                create_anim_frame(168, 4, 3),
+                                //create_anim_frame(168, 4, 3),
                             },//what frames are shown.
                         }
                     },
@@ -2349,9 +2353,16 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         "dash_air",
                         new anim()
                         {
-                            h = 40,
+                            //h = 40,
+                            //ticks=5,//how long is each frame shown.
+                            //frames= new int[][] { create_anim_frame(60-16, 4, 5, 1), },
                             ticks=5,//how long is each frame shown.
-                            frames= new int[][] { create_anim_frame(60-16, 4, 5, 1), },
+                            frames= new int[][]
+                            {
+                                create_anim_frame(160, 4, 3),
+                                create_anim_frame(164, 4, 3),
+                                //create_anim_frame(168, 4, 3),
+                            },//what frames are shown.
                         }
                     },
                     {
@@ -2416,7 +2427,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 inst.objs_add_queue.Add(new simple_fx() { x = hit_point.X, y = y + h * 0.25f });
 
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.vanishing))
-                { 
+                {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 });
                     inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
                 }
@@ -3761,6 +3772,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         {
                             x = final_x,
                             y = final_y,
+                            bank = 1,
                         });
                 }
             }
@@ -5092,6 +5104,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         BufferedKey next_level_key = new BufferedKey(Keys.PageDown);
         BufferedKey prev_level_key = new BufferedKey(Keys.PageUp);
+        BufferedKey next_tenth_level_key = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.PageDown });
+        BufferedKey prev_tenth_level_key = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.PageUp });
         BufferedKey ReloadContentButton = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.R});
         BufferedKey toggle_debug_draw = new BufferedKey(Keys.F1);
 
@@ -5267,7 +5281,19 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         //}
 
 #if DEBUG
-                        if (next_level_key.Update())
+                        if (next_tenth_level_key.Update())
+                        {
+                            int index = debug_map_list.FindIndex((Tuple<string, string> param) => { return (param.Item2 == current_map); });
+                            if (index >= 0)
+                            {
+                                cur_debug_map = (index + 10) % debug_map_list.Count;
+                                queued_map = debug_map_list[cur_debug_map].Item2;
+                                printh("queued: " + queued_map);
+                            }
+                            // update the key since we won't hit the else.
+                            next_level_key.Update();
+                        }
+                        else if (next_level_key.Update())
                         {
                             int index = debug_map_list.FindIndex((Tuple<string,string> param) => { return (param.Item2 == current_map); });
                             if (index >= 0)
@@ -5277,7 +5303,19 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                                 printh("queued: " + queued_map);
                             }
                         }
-                        if (prev_level_key.Update())
+                        if (prev_tenth_level_key.Update())
+                        {
+                            int index = debug_map_list.FindIndex((Tuple<string, string> param) => { return (param.Item2 == current_map); });
+                            if (index >= 0)
+                            {
+                                cur_debug_map = ((index - 10) + debug_map_list.Count) % debug_map_list.Count;
+                                queued_map = debug_map_list[cur_debug_map].Item2;
+                                printh("queued: " + queued_map);
+                            }
+                            // update the key since we won't hit the else.
+                            prev_level_key.Update();
+                        }
+                        else if (prev_level_key.Update())
                         {
                             int index = debug_map_list.FindIndex((Tuple<string, string> param) => { return (param.Item2 == current_map); });
                             if (index >= 0)
@@ -5332,8 +5370,28 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             objs = objs.Except(objs_remove_queue).ToList();
             objs_remove_queue.Clear();
 
-            objs.AddRange(objs_add_queue);
-            objs_add_queue.Clear();
+            // flip before iterating backwards. This is slight wrong, since hidden items will get flipped
+            // multiple times.
+            objs_add_queue.Reverse();
+
+            for (int i = objs_add_queue.Count - 1; i >= 0; i--)
+            {
+                sprite s = objs_add_queue[i] as sprite;
+
+                if (s != null)
+                {
+                    if (inst.is_packed_tile(fget(mget_tiledata(flr(s.x / 8.0f), flr(s.y / 8.0f))), packed_tile_types.rock_smash))
+                    {
+                        continue;
+                    }
+                }
+
+                objs.Add(objs_add_queue[i]);
+                objs_add_queue.RemoveAt(i);
+            }
+
+            //objs.AddRange(objs_add_queue);
+            //objs_add_queue.Clear();
 
             if (game_cam != null)
             {
