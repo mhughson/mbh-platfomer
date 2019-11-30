@@ -2353,7 +2353,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             protected player_controller controller;
 
             public bool platformed = false;
-            public float max_dx = 1;//max x speed
+            public float max_dx = 1.5f;//max x speed
             public float max_dy = 5;//max y speed
 
             public bool supports_map_links = true;
@@ -2472,7 +2472,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         new anim()
                         {
                             loop = true,
-                            ticks=10,//how long is each frame shown.
+                            ticks=7,//how long is each frame shown.
                             //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35, 48, 49, 50, 51 } },//what frames are shown.
                             frames = new int[][]
                             {
@@ -2688,10 +2688,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 var bd = btn(3); //down
                 dash_button._update60();
 
+                const float dash_speed = 3.0f;
+
                 if (dash_button.is_pressed && dash_count == 0 && dash_time <= 0 && inst.pc.has_artifact(artifacts.dash_pack))
                 {
                     dash_count = 1;
-                    dash_time = 30;
+                    
+                    // Try to make dash go exactly 4 meta tiles. Note that if dash_speed is greater than
+                    // 1, it will not land exactly on point as we always move the full dash_speed every frame.
+                    dash_time = ((4.0f * 16.0f) / dash_speed);
                     // NOTE: only drains when grounded, etc.
                     trail_time = 15;
                     dy = 0;
@@ -2816,8 +2821,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
                 }
 
-
-                const float dash_speed = 2.0f;
                 if (is_dashing)
                 {
                     if (dash_dir.X < 0)
