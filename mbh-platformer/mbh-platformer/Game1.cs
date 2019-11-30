@@ -3291,7 +3291,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (inst.cur_game_state != game_state.gameplay_dead)
                 {
-                    if (in_water_timer > 0 /*&& in_water_timer < time_before_water_damage_start*/)
+                    if (in_water_timer > 0 /*&& in_water_timer < time_before_water_damage_start*/ && !is_hist)
                     {
                         float percent = max(1.0f - ((float)in_water_timer / (float)time_before_water_damage_start), 0.0f);
 
