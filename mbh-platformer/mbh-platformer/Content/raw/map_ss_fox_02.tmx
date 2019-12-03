@@ -65,10 +65,5 @@
     <property name="type" value="side"/>
    </properties>
   </object>
-  <object id="9" type="artifact" x="368" y="48" width="16" height="16">
-   <properties>
-    <property name="id" value="health_01"/>
-   </properties>
-  </object>
  </objectgroup>
 </map>

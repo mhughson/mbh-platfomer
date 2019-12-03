@@ -1719,16 +1719,27 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             protected float tick_x = 0;
             protected float tick_y = 0;
             protected bool hit_this_frame = false;
-            int dist_tiles_x;
-            int dist_tiles_y;
-            float mid_x;
-            float mid_y;
 
-            float dir_x;
-            float dir_y;
             int ticks_per_dir_x;
             int ticks_per_dir_y;
             float linear_speed;
+
+            float start_x;
+            float end_x;
+            float start_y;
+            float end_y;
+
+            // Number of frames to wait before moving the first time.
+            public int start_delay;
+
+            // Has this platform finished its start delay.
+            bool activated;
+
+            // In the case of a one_way platform, has it reached its destination.
+            bool finished;
+
+            // Stop after reach first destination
+            public bool one_way;
 
             public enum movement_style
             {
@@ -1737,7 +1748,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
             movement_style move_style;
 
-            public platform(float x, float y, int width_tiles, int dist_tiles_x, int dist_tiles_y, movement_style move_style)
+            // Function used to move the platform based on the movement style.
+            Func<float, float, float, float> MoveFunc;
+
+            public platform(float x, float y, int width_tiles, int dist_tiles_x, int dist_tiles_y, movement_style move_style, int start_delay)
             {
                 anims = new Dictionary<string, anim>()
                 {
@@ -1779,27 +1793,47 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 this.x = x_initial = x;
                 this.y = y_initial = y;
 
-                this.dist_tiles_x = dist_tiles_x;
-                this.dist_tiles_y = dist_tiles_y;
-
-                mid_x = x + (dist_tiles_x * 8.0f * 0.5f);
-                mid_y = y + (dist_tiles_y * 8.0f * 0.5f);
-
-                dir_x = Math.Sign(dist_tiles_x);
-                dir_y = Math.Sign(dist_tiles_y);
-
                 linear_speed = 0.5f;
                 ticks_per_dir_x = flr(abs((dist_tiles_x * 8.0f) / linear_speed));
                 ticks_per_dir_y = flr(abs((dist_tiles_y * 8.0f) / linear_speed));
 
+
+                start_x = x_initial;
+                end_x = x_initial + dist_tiles_x * 8.0f;
+                start_y = y_initial;
+                end_y = y_initial + dist_tiles_y * 8.0f;
+
                 this.move_style = move_style;
+
+                this.start_delay = start_delay;
+                if (start_delay == 0)
+                {
+                    activated = true;
+                }
+                else
+                {
+                    activated = false;
+                }
+
+                switch(move_style)
+                {
+                    case movement_style.linear:
+                        {
+                            MoveFunc = MathHelper.Lerp;
+                            break;
+                        }
+                    case movement_style.smooth:
+                        {
+                            MoveFunc = MathHelper.SmoothStep;
+                            break;
+                        }
+                }
 
                 is_platform = true;
             }
 
             public override void _update60()
             {
-                
                 if (inst.hit_pause.is_paused())
                 {
                     return;
@@ -1819,48 +1853,58 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 //base._update60();
 
-                switch (move_style)
+                if (!activated)
                 {
-                    case movement_style.smooth:
+                    // Just using tick_x since neither x nor y will matter until it is activated.
+                    if (tick_x < start_delay)
+                    {
+                        tick_x++;
+                    }
+                    else
+                    {
+                        activated = true;
+                        tick_x = 0;
+                    }
+                }
+
+                if (activated && !finished)
+                {
+                    if (start_x != end_x)
+                    {
+                        x = MoveFunc(start_x, end_x, (float)tick_x / (float)ticks_per_dir_x);
+                    }
+
+                    if (tick_x >= ticks_per_dir_x)
+                    {
+                        if (one_way && start_x != end_x)
                         {
-
-                            float speed = 0.001f;
-
-                            //y = 964 - (cos(tick) * 64.0f);
-                            //y = 964;// - (cos(tick) * 64.0f);
-                            x = mid_x + -cos(tick_x * speed) * (dist_tiles_x * 4.0f); //80 - (cos(tick) * 64.0f);
-                            y = mid_y + -cos(tick_y * speed) * (dist_tiles_y * 4.0f); //80 - (cos(tick) * 64.0f);
-
-                            //y += (sin(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
-
-                            tick_x += 1;
-                            tick_y += 1;
-
-                            //x += 1.0f;
-                            break;
+                            finished = true;
                         }
+                        tick_x = 0;
+                        float temp = start_x;
+                        start_x = end_x;
+                        end_x = temp;
+                    }
 
-                    case movement_style.linear:
+                    if (start_y != end_y)
+                    {
+                        y = MoveFunc(start_y, end_y, (float)tick_y / (float)ticks_per_dir_y);
+                    }
+
+                    if (tick_y >= ticks_per_dir_y)
+                    {
+                        if (one_way && start_y != end_y)
                         {
-                            x += dir_x * linear_speed;
-                            y += dir_y * linear_speed;
-
-                            tick_x++;
-                            tick_y++;
-
-                            if (tick_x >= ticks_per_dir_x)
-                            {
-                                dir_x *= -1;
-                                tick_x = 0;
-                            }
-                            if (tick_y >= ticks_per_dir_y)
-                            {
-                                dir_y *= -1;
-                                tick_y = 0;
-                            }
-
-                            break;
+                            finished = true;
                         }
+                        tick_y = 0;
+                        float temp = start_y;
+                        start_y = end_y;
+                        end_y = temp;
+                    }
+
+                    tick_x += 1;
+                    tick_y += 1;
                 }
 
                 if (touching_player)
@@ -1868,29 +1912,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     hit_this_frame = true;
                     inst.pc.pawn.x += self.x - old_x;
                     inst.pc.pawn.y += self.y - old_y;
-
-                    //inst.p.pawn.dx = self.x - old_x;
-                    //inst.p.pawn.dy = self.y - old_y;
-
-                    //inst.p.pawn.platformed = true;
                 }
                 else
                 {
                     inst.pc.pawn.platformed = false;
                 }
-
-                //if (tick >= 0.5f)
-                //{
-                //    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 }, 0);
-                //    inst.objs_remove_queue.Add(this);
-                //}
-
-                // Should be handled by collide side.
-                //if (inst.p.pawn.dash_time > 0 && inst.intersects_obj_obj(this, inst.p.pawn))
-                //{
-                //    Vector2 v = new Vector2(x - (x - inst.p.pawn.x) * 0.5f, y - (y - inst.p.pawn.y) * 0.5f);
-                //    inst.p.pawn.start_dash_bounce(ref v);
-                //}
             }
         }
 
@@ -2301,16 +2327,17 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             health_01 = 1 << 1,
             health_02 = 1 << 2,
             health_03 = 1 << 3,
+            health_04 = 1 << 4,
             health_start = health_00,
-            health_end = health_03,
+            health_end = health_04, // UPDATE TECH BELOW WHEN ADDING HEALTH
 
             // Human tech
-            dash_pack = 1 << 4,
-            jump_boots = 1 << 5,
-            rock_smasher = 1 << 6,
-            ground_slam = 1 << 7,
-            light = 1 << 8,
-            air_tank = 1 << 9,
+            dash_pack = 1 << 5,
+            jump_boots = 1 << 6,
+            rock_smasher = 1 << 7,
+            ground_slam = 1 << 8,
+            light = 1 << 9,
+            air_tank = 1 << 10,
 
             // TODO: Re-breather for underwater
             // TODO: Light for caves
@@ -3322,7 +3349,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             //be before camera starts following.
             //allows for movement in center without camera
             //constantly moving.
-            float pull_threshold = 16;
+            public float pull_threshold = 16;
+
+            public Vector2 pull_threshold_offset = Vector2.Zero;
 
             //min and max positions of camera.
             //the edges of the level.
@@ -3440,22 +3469,22 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public float pull_max_x()
             {
-                return pos.X + pull_threshold;
+                return (pos.X + pull_threshold_offset.X) + pull_threshold;
             }
 
             public float pull_min_x()
             {
-                return pos.X - pull_threshold;
+                return (pos.X + pull_threshold_offset.X) - pull_threshold;
             }
 
             public float pull_max_y()
             {
-                return pos.Y + pull_threshold;
+                return (pos.Y + pull_threshold_offset.Y) + pull_threshold;
             }
 
             public float pull_min_y()
             {
-                return pos.Y - pull_threshold;
+                return (pos.Y + pull_threshold_offset.Y) - pull_threshold;
 
             }
 
@@ -4688,6 +4717,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             Vector2 cam_area_min = Vector2.Zero;
             Vector2 cam_area_max = Vector2.Zero;
+            float pull_threshold_offset_y = 0;
 
             objs.Clear();
             objs_remove_queue.Clear();
@@ -4789,6 +4819,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     {
                         cam_area_min = new Vector2((float)o.X, (float)o.Y);
                         cam_area_max = new Vector2((float)o.X + (float)o.Width, (float)o.Y + (float)o.Height);
+                        string pull_threshold_offset_y_string;
+                        if (o.Properties.TryGetValue("pull_threshold_offset_y", out pull_threshold_offset_y_string))
+                        {
+                            pull_threshold_offset_y = float.Parse(pull_threshold_offset_y_string);
+                        }
+                        else
+                        {
+                            pull_threshold_offset_y = 0.0f;
+                        }
                     }
                     else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
                     {
@@ -4874,7 +4913,25 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         o.Properties.TryGetValue("dist_x", out dist_x_string);
                         string dist_y_string = "0";
                         o.Properties.TryGetValue("dist_y", out dist_y_string);
-                        platform p = new platform((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f), (int)(o.Width / 8.0f), int.Parse(dist_x_string), int.Parse(dist_y_string), platform.movement_style.linear);
+                        string movement_style_string;
+                        if(!o.Properties.TryGetValue("movement_style", out movement_style_string))
+                        {
+                            movement_style_string = "linear";
+                        }
+                        string start_delay_string;
+                        if (!o.Properties.TryGetValue("start_delay", out start_delay_string))
+                        {
+                            start_delay_string = "0";
+                        }
+                        string one_way_string;
+                        if (!o.Properties.TryGetValue("one_way", out one_way_string))
+                        {
+                            one_way_string = "false";
+                        }
+                        platform p = new platform((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f), (int)(o.Width / 8.0f), int.Parse(dist_x_string), int.Parse(dist_y_string), (platform.movement_style)Enum.Parse(typeof(platform.movement_style), movement_style_string), int.Parse(start_delay_string))
+                        {
+                            one_way = bool.Parse(one_way_string),
+                        };
                         objs_add_queue.Add(p);
                     }
                     else if (string.Compare(o.Type, "map_link", true) == 0)
@@ -4985,6 +5042,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
                 play_area_min = cam_area_min_og,
                 play_area_max = cam_area_max_og,
+                pull_threshold_offset = new Vector2(0, pull_threshold_offset_y),
             };
             game_cam.jump_to_target();
 
