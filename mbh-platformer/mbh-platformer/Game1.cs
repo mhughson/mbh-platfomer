@@ -4660,6 +4660,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public bool open_this_frame = true;
 
+            public int longest_line;
+
             public void set_message(string title, string body, Action on_close = null)
             {
                 body_with_breaks = new List<string>();
@@ -4675,6 +4677,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     if (words[i].Length + line.Length < chars_per_line)
                     {
                         line += words[i] + " ";
+                        longest_line = (int)inst.max(longest_line, line.Length);
                     }
                     else
                     {
@@ -6014,7 +6017,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             // message box
             if (message != null)
             {
-                float box_w = Res.X / 2.0f;
+                float box_w = message.longest_line * 4.0f; // Res.X / 2.0f;
                 if (message.body_with_breaks.Count == 1)
                 {
                     box_w = message.body_with_breaks[0].Length * 4;
