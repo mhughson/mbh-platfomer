@@ -94,6 +94,16 @@
    <property name="Flag" type="int" value="8"/>
   </properties>
  </tile>
+ <tile id="36">
+  <properties>
+   <property name="Flag" type="int" value="7"/>
+  </properties>
+ </tile>
+ <tile id="37">
+  <properties>
+   <property name="Flag" type="int" value="7"/>
+  </properties>
+ </tile>
  <tile id="48">
   <properties>
    <property name="Flag" type="int" value="17"/>
@@ -112,6 +122,16 @@
  <tile id="51">
   <properties>
    <property name="Flag" type="int" value="8"/>
+  </properties>
+ </tile>
+ <tile id="52">
+  <properties>
+   <property name="Flag" type="int" value="7"/>
+  </properties>
+ </tile>
+ <tile id="53">
+  <properties>
+   <property name="Flag" type="int" value="7"/>
   </properties>
  </tile>
  <tile id="64">

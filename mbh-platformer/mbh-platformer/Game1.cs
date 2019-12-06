@@ -1657,6 +1657,31 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public class rock_pendulum : rock
         {
+            float dir_x;
+
+            public rock_pendulum(float dir_x) : base()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(6, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                bank = 1;
+
+                this.dir_x = dir_x;
+            }
             public override void _update60()
             {
                 if (inst.hit_pause.is_paused())
@@ -1677,11 +1702,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 var old_y = self.y;
 
                 //base._update60();
-                tick += 0.0025f;
+                tick += 0.01f;
                 //y = 964 - (cos(tick) * 64.0f);
                 //y = 964;// - (cos(tick) * 64.0f);
-                x += (cos(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
-                y += (sin(tick)) * 1.0f; //80 - (cos(tick) * 64.0f);
+                x += (cos(tick)) * 4.0f * dir_x; //80 - (cos(tick) * 64.0f);
+                y += (sin(tick)) * 4.0f; //80 - (cos(tick) * 64.0f);
 
                 if (touching_player)
                 {
@@ -1701,7 +1726,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (tick >= 0.5f)
                 {
-                    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 868, 869, 884, 885 }, 0);
+                    inst.change_meta_tile(flr(x / 8), flr(y / 8), new int[] { 36, 37, 52, 53 }, 1);
                     inst.objs_remove_queue.Add(this);
                 }
 
@@ -2642,7 +2667,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
-                    inst.objs_add_queue.Add(new rock_pendulum() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
+                    inst.objs_add_queue.Add(new rock_pendulum(Math.Sign(hit_point.X - x)) { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.rock_smash) && inst.pc.has_artifact(artifacts.rock_smasher))
                 {
@@ -5351,6 +5376,24 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             return btnp(4) || btnp(6);
         }
 
+        public int sprfx_camo_warp(int x, int y, int c)
+        {
+            // Don't do anything with transparent pixels.
+            // TODO: Check if c == palt value.
+            if (c == 11) return c;
+
+            // Dither:
+            //if (x % 2 == 0 && y % 2 == 0 || x % 2 == 1 && y % 2 == 1)
+            //{
+            //    return 19;
+            //}
+
+            // Look at the color already at this location and use that color
+            // but faded out slightly.
+            int[] t = new int[] { 0, 5, 6, 7 };
+            return t[flr(rnd(4))];// fade_table[1][pget(x, y)];
+        }
+
 
         List<Tuple<string /*label*/, string/*value*/>> debug_map_list;
         int cur_debug_map = -1;
@@ -5409,6 +5452,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
 
             dset((uint)cartdata_index.version, 1);
+
+            sprfxadd(sprfx_camo_warp, 0);
 
             objs = new List<PicoXObj>();
             objs_remove_queue = new List<PicoXObj>();
@@ -6065,6 +6110,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 printo("lt:" + (((pc.found_artifacts & artifacts.light) == artifacts.light) ? "1" : "0"), 2, ypos, 7, 0);
                 ypos += yinc;
                 printo("at:" + (((pc.found_artifacts & artifacts.air_tank) == artifacts.air_tank) ? "1" : "0"), 2, ypos, 7, 0);
+                ypos += yinc;
+                printo("coin:" + pc.get_gem_count(), 2, ypos, 7, 0);
                 ypos += yinc;
             }
         }

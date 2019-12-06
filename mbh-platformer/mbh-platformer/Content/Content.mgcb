@@ -70,6 +70,12 @@
 #begin raw/map_ss_hotel_00.tmx
 /copy:raw/map_ss_hotel_00.tmx
 
+#begin raw/map_ss_hotel_01.tmx
+/copy:raw/map_ss_hotel_01.tmx
+
+#begin raw/map_ss_hotel_02.tmx
+/copy:raw/map_ss_hotel_02.tmx
+
 #begin raw/map_ss_india_00.tmx
 /copy:raw/map_ss_india_00.tmx
 
