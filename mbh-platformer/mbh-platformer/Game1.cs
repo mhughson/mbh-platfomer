@@ -5966,22 +5966,22 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         // Assume a max of 3 layers for now. Missing or "not visible" layers will not be rendered.
                         map(0, 0, 0, 0, 9999, 9999, 0, 0);
                         map(0, 0, 0, 0, 9999, 9999, 0, 1);
-                        map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                        //map(0, 0, 0, 0, 9999, 9999, 0, 2);
                         if (cur_map_config.is_tower)
                         {
                             if (draw_left)
                             {
                                 camera((final_cam.X + cur_map_config.map_size_pixels.X) % cur_map_config.map_size_pixels.X, final_cam.Y);
                                 map(0, 0, 0, 0, 9999, 9999, 0, 0);
-                                map(0, 0, 0, 0, 9999, 9999, 0, 1);
-                                map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                                //map(0, 0, 0, 0, 9999, 9999, 0, 1);
+                                //map(0, 0, 0, 0, 9999, 9999, 0, 2);
                             }
                             else
                             {
                                 camera((final_cam.X - cur_map_config.map_size_pixels.X) % cur_map_config.map_size_pixels.X, final_cam.Y);
                                 map(0, 0, 0, 0, 9999, 9999, 0, 0);
-                                map(0, 0, 0, 0, 9999, 9999, 0, 1);
-                                map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                                //map(0, 0, 0, 0, 9999, 9999, 0, 1);
+                                //map(0, 0, 0, 0, 9999, 9999, 0, 2);
                             }
                         }
                         bset(0);
@@ -6032,6 +6032,23 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
             }
             sprfxset(1, false);
+
+            // draw foreground layer.
+            switch (cur_game_state)
+            {
+                case game_state.main_menu:
+                case game_state.level_trans_exit:
+                case game_state.level_trans_enter:
+                case game_state.gameplay:
+                case game_state.gameplay_dead:
+                    {
+                        apply_pal(get_cur_pal(false));
+                        map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                        bset(0);
+                        pal();
+                        break;
+                    }
+            }
 
             // Draw the player here so that it draws over the fade out during level transition.
             //apply_pal(get_cur_pal(true));
