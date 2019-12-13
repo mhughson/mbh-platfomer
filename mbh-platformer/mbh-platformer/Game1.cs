@@ -1429,13 +1429,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         {
             int ticks;
             float dir;
-            int life_time;
             float speed;
 
             public lava_blast_spawner(float dir)
             {
                 this.dir = dir;
-                life_time = 10 * 5;
                 speed = 16;
             }
 
@@ -1818,7 +1816,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 this.x = x_initial = x;
                 this.y = y_initial = y;
 
-                linear_speed = 0.5f;
+                linear_speed = 1; // 0.5f;
                 ticks_per_dir_x = flr(abs((dist_tiles_x * 8.0f) / linear_speed));
                 ticks_per_dir_y = flr(abs((dist_tiles_y * 8.0f) / linear_speed));
 
@@ -2479,10 +2477,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             complex_button jump_button = new complex_button(4);
             complex_button dash_button = new complex_button(5);
 
-            int min_jump_press = 0;//min time jump can be held
             int max_jump_press = 12;//max time jump can be held
-
-            bool jump_btn_released = true;//can we jump again?
 
             int jump_count = 0;
 
@@ -2905,6 +2900,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 //move in x
                 self.x += self.dx;
+
+                if (inst.cur_map_config.is_tower)
+                {
+                    self.x = (self.x + inst.cur_map_config.map_size_pixels.X) % inst.cur_map_config.map_size_pixels.X;
+                }
 
                 //hit walls
                 Vector2 hit_point = new Vector2();
@@ -3409,7 +3409,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 self.shake_remaining = (int)max(0, self.shake_remaining - 1);
 
-                float max_cam_speed = 8.0f;
+                float max_cam_speed = 88888.0f;
 
                 if (self.tar.pawn != null)
                 {
@@ -3621,7 +3621,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             var offset_x = self.cw / 2.0f;
             var offset_y = self.ch / 3.0f;
             float correction_x = 0.0f;
-            float dir = 1.0f;
             bool hit = false;
             //if (self.dx < 0)
             //{
@@ -3647,7 +3646,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
 
             // Left Tiles
-            dir = -1.0f;
             offset_x *= -1.0f;
             correction_x = 8.0f;
             for (float i = -offset_y; i <= offset_y; i += 2) // for i=-(self.w/3),(self.w/3),2 do
@@ -4757,6 +4755,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             TmxMap TmxMapData = new TmxMap(GetMapString());
 
+            cur_map_config.map_size_pixels.X = TmxMapData.Width * 8;
+            cur_map_config.map_size_pixels.Y = TmxMapData.Height * 8;
+
             // Figure out what bank this map uses.
             // NOTE: For now we assume that each map uses only 1 bank.
             for (int i = 0; i < GetSheetPath().Count; i++)
@@ -4785,6 +4786,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             if (TmxMapData.Properties.ContainsKey("darkness_level"))
             {
                 cur_map_config.darkness_level = int.Parse(TmxMapData.Properties["darkness_level"]);
+            }
+
+            if (TmxMapData.Properties.ContainsKey("is_tower"))
+            {
+                cur_map_config.is_tower = bool.Parse(TmxMapData.Properties["is_tower"]);
             }
 
             foreach (var group in TmxMapData.ObjectGroups)
@@ -5072,9 +5078,13 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 play_area_max = cam_area_max_og,
                 pull_threshold_offset = new Vector2(0, pull_threshold_offset_y),
             };
+            if (cur_map_config.is_tower)
+            {
+                game_cam.pull_threshold = 0;
+            }
             game_cam.jump_to_target();
 
-            foreach (PicoXObj o in objs)
+            foreach (PicoXObj o in objs_add_queue)
             {
                 sprite s = o as sprite;
                 if (s != null)
@@ -5394,6 +5404,62 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             return t[flr(rnd(4))];// fade_table[1][pget(x, y)];
         }
 
+        public int sprfx_tower_fade(int x, int y, int c)
+        {
+            if (c == 11 || inst.pc.pawn == null) return c;
+
+            float tower_width = 192.0f * 0.5f;
+
+            // Note: x,y come in a world position. It looks like screen position if you look at the code,
+            //       however, pset applies camera transforms.      
+
+            // Find the distance from the player to the pixel (since the player is always centered). Could probably also
+            // use the camera position.
+            // The distance can loop at the x edges, so we get the distance in both directions,
+            // and take the smaller one (imagine player is sitting at right edge 383, while the pixel is at 0.
+            float delta = min(abs((inst.pc.pawn.x + cur_map_config.map_size_pixels.X) - x), min(abs((inst.pc.pawn.x - cur_map_config.map_size_pixels.X) - x), abs(inst.pc.pawn.x - x)));
+
+            //delta = abs(x - (Res.X * 0.5f));
+
+            var tabl = fade_table;
+
+            if (delta >= tower_width * 1.025f)
+            {
+                return 11;
+            }
+            else if (delta > tower_width * 0.9f)
+            {
+                return tabl[3][c];
+            }
+            else if (delta > tower_width * 0.8f)
+            {
+                if (x % 2 == 0 && y % 2 == 0 || x % 2 == 1 && y % 2 == 1)
+                {
+                    return tabl[2][c];
+                }
+                return tabl[3][c];
+            }
+            else if (delta > tower_width * 0.6f)
+            {
+                if (x % 2 == 0 && y % 2 == 0 || x % 2 == 1 && y % 2 == 1)
+                {
+                    return tabl[1][c];
+                }
+                return tabl[2][c];
+            }
+            else if (delta > tower_width * 0.5f)
+            {
+                // Dither:
+                if (x % 2 == 0 && y % 2 == 0 || x % 2 == 1 && y % 2 == 1)
+                {
+                    return c;
+                }
+                return tabl[1][c];
+            }
+
+            return c;
+        }
+
 
         List<Tuple<string /*label*/, string/*value*/>> debug_map_list;
         int cur_debug_map = -1;
@@ -5413,15 +5479,30 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         BufferedKey toggle_artifact_05 = new BufferedKey(Keys.D6);
         BufferedKey toggle_all_gems = new BufferedKey(Keys.D0);
 
+        int update_counter = 0;
+
         public class map_config
         {
             public int darkness_level = 0;
+            // The size (in pixels) of the currently loaded map.
+            public Point map_size_pixels = Point.Zero;
+            // Is the current map a rotating tower type.
+            public bool is_tower = false;
         }
 
         public map_config cur_map_config = new map_config();
 
         // A global scene used for displaying all ui_widgets. This an empty root.
         ui_widget ui_scene;
+
+        struct star
+        {
+            public Point pos;
+            public int color;
+            public bool big;
+        }
+
+        star[] stars = new star[128];
 
         public override void _init()
         {
@@ -5454,6 +5535,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             dset((uint)cartdata_index.version, 1);
 
             sprfxadd(sprfx_camo_warp, 0);
+            sprfxadd(sprfx_tower_fade, 1);
 
             objs = new List<PicoXObj>();
             objs_remove_queue = new List<PicoXObj>();
@@ -5482,11 +5564,22 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             //        )
             //    );
 
+            for (int i = 0; i < stars.Length; i++)
+            {
+                stars[i] = new star()
+                {
+                    pos = new Point(flr(rnd(Res.X)), flr(rnd(Res.Y))),
+                    big = rnd(10) > 1 ? false : true,
+                    color = rnd(10) > 1 ? 5 : 7,
+                };
+            }
+
             set_game_state(game_state.main_menu);
         }
 
         public override void _update60()
         {
+            update_counter++;
             time_in_state++;
 
             start_game._update60();
@@ -5724,6 +5817,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             palt(11, true);
             cls(0);
 
+            Vector2 final_cam = Vector2.Zero;
+
             if (game_cam != null)
             {
                 Vector2 offset = Vector2.Zero;
@@ -5769,11 +5864,90 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         }
                     }
                 }
-                camera(game_cam.cam_pos().X + offset.X, game_cam.cam_pos().Y + offset.Y);
+                final_cam = new Vector2(game_cam.cam_pos().X + offset.X, game_cam.cam_pos().Y + offset.Y);
             }
-            else
+
+            bool draw_left = final_cam.X < Res.X * 0.5f;
+
+            camera(final_cam.X, final_cam.Y);
+
+            if (cur_map_config.is_tower && pc.pawn != null)
             {
+                apply_pal(get_cur_pal(false));
+
                 camera(0, 0);
+
+                for (int i = 0; i < stars.Length; i++)
+                {
+                    if (stars[i].big)
+                    {
+                        circ(((stars[i].pos.X + game_cam.cam_pos().X) + Res.X) % Res.X, stars[i].pos.Y, 1, stars[i].color);
+                    }
+                    else
+                    {
+                        pset(((stars[i].pos.X + game_cam.cam_pos().X) + Res.X) % Res.X, stars[i].pos.Y, stars[i].color);
+                    }
+                }
+
+                int half_width = 96;
+                int tower_left_x = (int)pc.pawn.x - half_width; // (int)((Res.X * 0.5f) - (half_width));
+                int tower_offset = (-(int)((game_cam.cam_pos().X)) % 16) + 16;
+
+                /*
+                //bset(1);
+                //for(int x = 0; x < Res.X / 16 + 2; x++)
+                //{
+                //    for (int y = 0; y < Res.Y / 16; y++)
+                //    {
+                //        sspr(0, 0, 16, 16, pc.pawn.x - (Res.X * 0.5f) + (x * 16.0f) - tower_offset, y * 16);
+                //    }
+                //}
+                
+                float speed = 1;// 0.25f;
+                camera(0, 0);
+                //for (int i = 0; i < 3; i++)
+                {
+                    //map(0, 0, final_cam.X * 2, 0, 9999, 30, 0, 3);
+                    if (!draw_left)
+                    {
+                        //camera((-final_cam.X * speed + cur_map_config.map_size_pixels.X), final_cam.Y);
+                        map(0, 0, cur_map_config.map_size_pixels.X + final_cam.X, 0, 9999, 30, 0, 3);
+                    }
+                    else
+                    {
+                        ///camera((-final_cam.X * speed - cur_map_config.map_size_pixels.X), final_cam.Y);
+                        map(0, 0, -cur_map_config.map_size_pixels.X + final_cam.X, 0, 9999, 30, 0, 3);
+                    }
+                    //camera(-final_cam.X * speed, final_cam.Y);
+                    map(0, 0, +final_cam.X, 0, 9999, 30, 0, 3);
+                    //map(0, i * 10, 0, 0, 56, 10, 0, 3);
+                    //speed += 0.5f;
+                }
+                */
+
+                camera(final_cam.X, final_cam.Y);
+                bset(4);
+
+                for (int y = 0; y < Res.Y / 16; y++)
+                {
+                    for (int x = 0; x < 2; x++)
+                    {
+                        int y_offset = 0;
+                        if (y % 2 == 0)
+                        {
+                            y_offset = 8;
+                        }
+                        sspr(0, (int)((tower_offset + y_offset) % 16) * 16, half_width, 16, tower_left_x, y * 16);//  32, x, y * 16, 12, 2);
+                        sspr(0, (int)((tower_offset + y_offset) % 16) * 16 + 256, half_width, 16, tower_left_x + half_width, y * 16);//  32, x, y * 16, 12, 2);
+                    }
+                }
+                bset(0);
+                pal();
+            }
+
+            if (cur_map_config.is_tower)
+            {
+                sprfxset(1, true);
             }
 
             switch (cur_game_state)
@@ -5790,9 +5964,26 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         //pal(0, 7);
                         apply_pal(get_cur_pal(false));
                         // Assume a max of 3 layers for now. Missing or "not visible" layers will not be rendered.
-                        map(0, 0, 0, 0, 16, 16, 0, 0);
-                        map(0, 0, 0, 0, 16, 16, 0, 1);
-                        map(0, 0, 0, 0, 16, 16, 0, 2);
+                        map(0, 0, 0, 0, 9999, 9999, 0, 0);
+                        map(0, 0, 0, 0, 9999, 9999, 0, 1);
+                        map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                        if (cur_map_config.is_tower)
+                        {
+                            if (draw_left)
+                            {
+                                camera((final_cam.X + cur_map_config.map_size_pixels.X) % cur_map_config.map_size_pixels.X, final_cam.Y);
+                                map(0, 0, 0, 0, 9999, 9999, 0, 0);
+                                map(0, 0, 0, 0, 9999, 9999, 0, 1);
+                                map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                            }
+                            else
+                            {
+                                camera((final_cam.X - cur_map_config.map_size_pixels.X) % cur_map_config.map_size_pixels.X, final_cam.Y);
+                                map(0, 0, 0, 0, 9999, 9999, 0, 0);
+                                map(0, 0, 0, 0, 9999, 9999, 0, 1);
+                                map(0, 0, 0, 0, 9999, 9999, 0, 2);
+                            }
+                        }
                         bset(0);
                         pal();
                         //map(0, 0, 0, 0, 16, 16, 0, 1); // easy mode?
@@ -5800,8 +5991,13 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         break;
                     }
             }
+            sprfxset(1, false);
 
-            
+            if (cur_map_config.is_tower)
+            {
+                sprfxset(1, true);
+            }
+
             foreach (PicoXObj o in objs)
             {
                 if (o is sprite)
@@ -5811,6 +6007,31 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     (o as sprite).pop_pal();
                 }
             }
+
+            if (cur_map_config.is_tower)
+            {
+                camera((final_cam.X + cur_map_config.map_size_pixels.X) % cur_map_config.map_size_pixels.X, final_cam.Y);
+                foreach (PicoXObj o in objs)
+                {
+                    if (o is sprite)
+                    {
+                        (o as sprite).push_pal();
+                        o._draw();
+                        (o as sprite).pop_pal();
+                    }
+                }
+                camera((final_cam.X - cur_map_config.map_size_pixels.X) % cur_map_config.map_size_pixels.X, final_cam.Y);
+                foreach (PicoXObj o in objs)
+                {
+                    if (o is sprite)
+                    {
+                        (o as sprite).push_pal();
+                        o._draw();
+                        (o as sprite).pop_pal();
+                    }
+                }
+            }
+            sprfxset(1, false);
 
             // Draw the player here so that it draws over the fade out during level transition.
             //apply_pal(get_cur_pal(true));
@@ -5830,8 +6051,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             // Map grid.
             if (debug_draw_enabled)
             {
-                int start_x = flr(game_cam.cam_pos().X / 16.0f) * 16;
-                int start_y = flr(game_cam.cam_pos().Y / 16.0f) * 16;
+                int start_x = flr(final_cam.X / 16.0f) * 16;
+                int start_y = flr(final_cam.Y / 16.0f) * 16;
                 for (int x = start_x; x <= start_x + Res.X; x+=16)
                 {
                     line(x, start_y, x, start_y + Res.Y + 16, 2);
@@ -5852,7 +6073,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 player_pawn p = pc.pawn;
                 if (p != null)
                 {
-                    Vector2 v = new Vector2(p.x - game_cam.cam_pos().X /*+ (Res.X * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/, p.y - game_cam.cam_pos().Y /*+ (Res.Y * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/);
+                    Vector2 v = new Vector2(p.x - final_cam.X /*+ (Res.X * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/, p.y - final_cam.Y /*+ (Res.Y * 0.5f) + (rnd(dist_rnd) - (dist_rnd * 0.5f))*/);
 
                     float size = 200.0f - sin(time_in_state * 0.011f) * 1.0f;
                     float max_dist = size*size;
@@ -5868,7 +6089,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         for (int y = (int)v.Y - (int)size; y < v.Y + size; y++)
                         {
 
-                            float dist_rnd = 64;
+                            //float dist_rnd = 64;
                             //if (game_world.cur_area.light_status == area.lighting_status.on)
                             //{
                             //    dist_rnd = 64;
@@ -5974,7 +6195,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 //pal();
             };
 
-            int step = 1;
+            //int step = 1;
 
             switch (cur_game_state)
             {
@@ -6041,23 +6262,23 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
             }
 
-            step = (int)max(step, 1);
+            //step = (int)max(step, 1);
 
-            for (int x = 0; x < Res.X; x += step)
-            {
-                for (int y = 0; y < Res.Y; y += step)
-                {
-                    int color = pget(x, y);
+            //for (int x = 0; x < Res.X; x += step)
+            //{
+            //    for (int y = 0; y < Res.Y; y += step)
+            //    {
+            //        int color = pget(x, y);
 
-                    for (int i = 0; i < step; i++)
-                    {
-                        for (int j = 0; j < step; j++)
-                        {
-                            pset(x + i, y + j, color);
-                        }
-                    }
-                }
-            }
+            //        for (int i = 0; i < step; i++)
+            //        {
+            //            for (int j = 0; j < step; j++)
+            //            {
+            //                pset(x + i, y + j, color);
+            //            }
+            //        }
+            //    }
+            //}
 
             // message box
             if (message != null)
@@ -6114,6 +6335,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 printo("coin:" + pc.get_gem_count(), 2, ypos, 7, 0);
                 ypos += yinc;
             }
+
+            if (update_counter > 1)
+            {
+                printo("frames skipped: " + (update_counter-1), 32, 32, 8, 0);
+            }
+            update_counter = 0;
+
+            //printo("cam: [" + final_cam.X + "," + final_cam.Y + "]", 32, 40, 9, 0);
         }
 
         public override string GetMapString()
@@ -6128,7 +6357,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public override List<string> GetSheetPath()
         {
-            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3" };
+            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3", @"raw\rotating_tower_gb", };
         }
 
         public override Dictionary<int, string> GetSoundEffectPaths()

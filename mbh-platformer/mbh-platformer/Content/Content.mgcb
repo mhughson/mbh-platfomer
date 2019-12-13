@@ -94,6 +94,9 @@
 #begin raw/map_ss_india_05.tmx
 /copy:raw/map_ss_india_05.tmx
 
+#begin raw/map_ss_tower_00.tmx
+/copy:raw/map_ss_tower_00.tmx
+
 #begin raw/map_ss_vert_template.tmx
 /copy:raw/map_ss_vert_template.tmx
 
@@ -171,6 +174,18 @@
 
 #begin raw/platformer_sheet_3.tsx
 /copy:raw/platformer_sheet_3.tsx
+
+#begin raw/rotating_tower_gb.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:raw/rotating_tower_gb.png
 
 #begin raw/sheet_hello.png
 /importer:TextureImporter

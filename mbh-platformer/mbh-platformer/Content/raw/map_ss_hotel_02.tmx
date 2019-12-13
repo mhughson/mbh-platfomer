@@ -125,7 +125,7 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="13" name="rolley" type="spawn_rolley" x="272" y="384" width="16" height="16">
+  <object id="13" name="spawn_chopper" type="spawn_chopper" x="272" y="384" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
@@ -140,7 +140,7 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="16" name="rolley" type="spawn_rolley" x="160" y="432" width="16" height="16">
+  <object id="16" name="spawn_chopper" type="spawn_chopper" x="160" y="432" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
@@ -190,7 +190,7 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="26" name="rolley" type="spawn_rolley" x="108" y="504" width="16" height="16">
+  <object id="26" name="spawn_chopper" type="spawn_chopper" x="108" y="504" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
@@ -210,7 +210,7 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="30" name="rolley" type="spawn_rolley" x="256" y="600" width="16" height="16">
+  <object id="30" name="spawn_chopper" type="spawn_chopper" x="256" y="600" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
@@ -220,12 +220,12 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="32" name="rolley" type="spawn_rolley" x="304" y="668" width="16" height="16">
+  <object id="32" name="spawn_chopper" type="spawn_chopper" x="304" y="668" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="33" name="rolley" type="spawn_rolley" x="188" y="652" width="16" height="16">
+  <object id="33" name="spawn_chopper" type="spawn_chopper" x="188" y="652" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
@@ -250,12 +250,12 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="38" name="rolley" type="spawn_rolley" x="412" y="516" width="16" height="16">
+  <object id="38" name="spawn_chopper" type="spawn_chopper" x="412" y="516" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="40" name="rolley" type="spawn_rolley" x="316" y="444" width="16" height="16">
+  <object id="40" name="spawn_chopper" type="spawn_chopper" x="316" y="444" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="1"/>
    </properties>

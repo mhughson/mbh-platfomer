@@ -5,6 +5,10 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mbh-platformer", "mbh-platformer\mbh-platformer.csproj", "{555E0F84-8263-4381-8646-50A87A9ED00A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mono8GL", "..\..\mono8\Mono8GL\Mono8GL.csproj", "{7F50C385-C20F-4130-922C-45B8DFB7F870}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PicoX", "..\..\mono8\PicoX\PicoX.csproj", "{C50CB44E-FB16-44D5-B09B-96B562F7D149}"
+EndProject
 Global
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
@@ -18,6 +22,14 @@ Global
 		{555E0F84-8263-4381-8646-50A87A9ED00A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{555E0F84-8263-4381-8646-50A87A9ED00A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{555E0F84-8263-4381-8646-50A87A9ED00A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F50C385-C20F-4130-922C-45B8DFB7F870}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F50C385-C20F-4130-922C-45B8DFB7F870}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F50C385-C20F-4130-922C-45B8DFB7F870}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F50C385-C20F-4130-922C-45B8DFB7F870}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C50CB44E-FB16-44D5-B09B-96B562F7D149}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C50CB44E-FB16-44D5-B09B-96B562F7D149}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C50CB44E-FB16-44D5-B09B-96B562F7D149}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C50CB44E-FB16-44D5-B09B-96B562F7D149}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
