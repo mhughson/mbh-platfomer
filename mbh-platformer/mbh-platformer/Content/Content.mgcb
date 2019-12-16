@@ -97,6 +97,15 @@
 #begin raw/map_ss_tower_00.tmx
 /copy:raw/map_ss_tower_00.tmx
 
+#begin raw/map_ss_tower_01.tmx
+/copy:raw/map_ss_tower_01.tmx
+
+#begin raw/map_ss_tower_02.tmx
+/copy:raw/map_ss_tower_02.tmx
+
+#begin raw/map_ss_tower_03.tmx
+/copy:raw/map_ss_tower_03.tmx
+
 #begin raw/map_ss_vert_template.tmx
 /copy:raw/map_ss_vert_template.tmx
 
@@ -174,6 +183,21 @@
 
 #begin raw/platformer_sheet_3.tsx
 /copy:raw/platformer_sheet_3.tsx
+
+#begin raw/platformer_sheet_4.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:raw/platformer_sheet_4.png
+
+#begin raw/platformer_sheet_4.tsx
+/copy:raw/platformer_sheet_4.tsx
 
 #begin raw/rotating_tower_gb.png
 /importer:TextureImporter

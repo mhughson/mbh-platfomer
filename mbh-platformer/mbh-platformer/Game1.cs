@@ -1816,7 +1816,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 this.x = x_initial = x;
                 this.y = y_initial = y;
 
-                linear_speed = 1; // 0.5f;
+                linear_speed = 0.5f;
                 ticks_per_dir_x = flr(abs((dist_tiles_x * 8.0f) / linear_speed));
                 ticks_per_dir_y = flr(abs((dist_tiles_y * 8.0f) / linear_speed));
 
@@ -4031,6 +4031,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public string dest_map_path;
             public string dest_spawn_name;
             public transition_dir trans_dir;
+            public bool require_up_press = false;
 
             public map_link()
             {
@@ -4043,12 +4044,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (inst.pc.pawn.supports_map_links && inst.intersects_obj_obj(this, inst.pc.pawn))
                 {
-                    inst.active_map_link = this;
-                    inst.queued_map = dest_map_path;
-                    // Store the offset relative to the map link, so that on the other side of the transition,
-                    // we can offset the same amount.
-                    //inst.spawn_offset.X = inst.pc.pawn.x - inst.game_cam.cam_pos().X;
-                    //inst.spawn_offset.Y = inst.pc.pawn.y - inst.game_cam.cam_pos().Y;
+                    if (!require_up_press || btnp(2))
+                    {
+                        inst.active_map_link = this;
+                        inst.queued_map = dest_map_path;
+                        // Store the offset relative to the map link, so that on the other side of the transition,
+                        // we can offset the same amount.
+                        //inst.spawn_offset.X = inst.pc.pawn.x - inst.game_cam.cam_pos().X;
+                        //inst.spawn_offset.Y = inst.pc.pawn.y - inst.game_cam.cam_pos().Y;
+                    }
                 }
             }
 
@@ -4665,7 +4669,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         public map_link active_map_link;
 
         public int cur_level_id = 0;
-        public int gems_per_level = 4;
+        public int gems_per_level = 2;
 
         public checkpoint last_activated_checkpoint;
 
@@ -4777,6 +4781,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             if (TmxMapData.Properties.ContainsKey("level_id"))
             {
                 cur_level_id = int.Parse(TmxMapData.Properties["level_id"]);
+
+                System.Diagnostics.Debug.Assert(cur_level_id < (32 / gems_per_level), "Using level id that won't fit in 32 bits.");
             }
             else
             {
@@ -4970,12 +4976,19 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
                     else if (string.Compare(o.Type, "map_link", true) == 0)
                     {
+                        string require_up_press_string = "false";
+                        bool require_up_press = false;
+                        if (o.Properties.TryGetValue("require_up_press", out require_up_press_string))
+                        {
+                            require_up_press = bool.Parse(require_up_press_string);
+                        }
                         map_link ml = new map_link()
                         {
                             x = (float)o.X + ((float)o.Width * 0.5f),
                             y = (float)o.Y + ((float)o.Height * 0.5f),
                             w = (int)o.Width,
                             h = (int)o.Height,
+                            require_up_press = require_up_press,
                         };
                         ml.cw = ml.w;
                         ml.ch = ml.h;
@@ -5470,6 +5483,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         BufferedKey prev_tenth_level_key = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.PageUp });
         BufferedKey ReloadContentButton = new BufferedKey(new Keys[] { Keys.LeftShift, Keys.R});
         BufferedKey toggle_debug_draw = new BufferedKey(Keys.F1);
+        BufferedKey toggle_fly = new BufferedKey(Keys.F);
 
         BufferedKey toggle_artifact_00 = new BufferedKey(Keys.D1);
         BufferedKey toggle_artifact_01 = new BufferedKey(Keys.D2);
@@ -5594,6 +5608,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             if (toggle_debug_draw.Update())
             {
                 debug_draw_enabled = !debug_draw_enabled;
+            }
+
+            if (toggle_fly.Update())
+            {
+                pc.DEBUG_fly_enabled = !pc.DEBUG_fly_enabled;
             }
 
             if (toggle_artifact_00.Update())
@@ -5890,8 +5909,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
 
                 int half_width = 96;
+
                 int tower_left_x = (int)pc.pawn.x - half_width; // (int)((Res.X * 0.5f) - (half_width));
-                int tower_offset = (-(int)((game_cam.cam_pos().X)) % 16) + 16;
+                int tower_offset = (-(int)((game_cam.cam_pos().X * 0.5f)) % 16) + 16;
 
                 /*
                 //bset(1);
@@ -5925,10 +5945,13 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
                 */
 
-                camera(final_cam.X, final_cam.Y);
+                // Mod by the height of 2 tiles (eg. a single loop below) to keep the tower on screen at all times.
+                // Every other row it loops, so this looks seamless.
+                camera(final_cam.X, final_cam.Y % 32);
                 bset(4);
 
-                for (int y = 0; y < Res.Y / 16; y++)
+                // An extra 2 rows to account of for looping logic above (mod 32).
+                for (int y = 0; y < (Res.Y / 16) + 2; y++)
                 {
                     for (int x = 0; x < 2; x++)
                     {
@@ -5949,6 +5972,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 sprfxset(1, true);
             }
+
+            camera(final_cam.X, final_cam.Y);
 
             switch (cur_game_state)
             {
@@ -6200,16 +6225,37 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
             };
 
+            Action draw_gems = () =>
+            {
+                apply_pal(get_cur_pal(false));
+                spr(260, Res.X - 32, 0, 2, 2);
+                printo("x" + pc.get_gem_count(), Res.X - 14, 6, 7, 0);
+                pal();
+            };
+
             Action draw_hud = () =>
             {
                 if (pc == null || pc.pawn == null)
                 {
                     return;
                 }
+                //sprfxset(1, true);
                 //apply_pal(get_cur_pal(false));
                 rectfill(0, 0, Res.X, 15, 7);
+
+                //for (int y = 0; y < 16; y++)
+                //{
+                //    for (int x = 0; x < Res.X; x++)
+                //    {
+                //        pset(x, y, fade_table[2][pget(x, y)]);
+                //    }
+                //}
+                line(0, 16, Res.X, 16, 0);
+
                 draw_health();
+                draw_gems();
                 //pal();
+                //sprfxset(1, false);
             };
 
             //int step = 1;
@@ -6374,7 +6420,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public override List<string> GetSheetPath()
         {
-            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3", @"raw\rotating_tower_gb", };
+            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3", @"raw\platformer_sheet_4", };
         }
 
         public override Dictionary<int, string> GetSoundEffectPaths()
