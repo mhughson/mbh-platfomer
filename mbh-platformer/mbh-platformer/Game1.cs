@@ -832,6 +832,38 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class simple_fx_projectile_death : simple_fx
+        {
+            public simple_fx_projectile_death() : base()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks = 5,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(456, 2, 2),
+                                create_anim_frame(458, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+
+                dx = 0;
+                dy = 0;
+            }
+        }
+
         public class badguy : sprite
         {
             int local_ticks = 0;
@@ -1206,12 +1238,12 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public class chopper : badguy
         {
-            public chopper() : base(0)
+            public chopper(int duration, int dist) : base(0)
             {
                 flying = new flying_def()
                 {
-                    duration = 7,
-                    dist = 96,
+                    duration = duration,
+                    dist = dist,
                     horz = true,
                 };
 
@@ -1548,6 +1580,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public override void _update60()
             {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
                 if (dead_time > 0)
                 {
                     set_anim("open_mouth");
@@ -1562,6 +1599,227 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
                 }
                 base._update60();
+            }
+        }
+
+
+
+        public class dart_gun : sprite
+        {
+            int ticks = 0;
+
+            // How long to wait before starting to shoot.
+            public int start_delay = 0;
+
+            // The number of ticks to wait between each shot, after start_delay has expired.
+            public int firing_delay = 240;
+
+            // Has the start_delay expired.
+            bool started = false;
+
+            float dir_x;
+            float dir_y;
+            int bullet_life_time = 480; // enough to leave the screen
+
+            public dart_gun(float dir_x, float dir_y) : base()
+            {
+
+                int frame = 352;
+                if (dir_y != 0)
+                {
+                    frame = 354;
+                }
+
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "idle",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks= 1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(frame, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("idle");
+
+                w = 16;
+                h = 16;
+                cw = 16;
+                ch = 16;
+
+                dx = 0;
+                dy = 0;
+
+                // Can't have no direction and can't be diagonal.
+                System.Diagnostics.Debug.Assert(dir_x != dir_y);
+
+                this.dir_x = dir_x;
+                this.dir_y = dir_y;
+
+                if (dir_x < 0)
+                {
+                    flipx = true;
+                }
+                if (dir_y < 0)
+                {
+                    flipy = true;
+                }
+
+                bullet_life_time = 480;
+            }
+
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                if (!started)
+                {
+                    if (ticks == start_delay)
+                    {
+                        ticks = 0;
+                        started = true;
+                    }
+                }
+                
+                // Not an else so that fire_shot is called the frame that start_delay expires.
+                if (started)
+                {
+                    if (ticks >= firing_delay)
+                    {
+                        ticks = 0;
+                    }
+
+                    // Handle both the frame that started gets set to true, and when firing delay loops.
+                    if (ticks == 0)
+                    {
+                        fire_shot();
+                    }
+                }
+
+                base._update60();
+                
+                ticks++;
+            }
+
+            public override void push_pal()
+            {
+                base.push_pal();
+
+                //if (ticks % 4 >= 2)
+                {
+                    if (firing_delay - ticks < 10)
+                    {
+                        inst.apply_pal(inst.bright_table[2]);
+                    }
+                }
+            }
+
+            void fire_shot()
+            {
+                projectile p = new projectile(dir_x, dir_y, bullet_life_time)
+                {
+                    x = x + dir_x * 8.0f,
+                    y = y + dir_y * 8.0f,
+                };
+                inst.objs_add_queue.Add(p);
+            }
+        }
+
+        public class projectile : badguy
+        {
+            int life_span;
+
+            public projectile(float dir_x, float dir_y, int life_span) : base(0)
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks = 1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(360, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+                cw = 8;
+                ch = 8;
+
+                grav = 0.0f;
+
+                touch_damage = true;
+                attack_power = 1.0f;
+
+                solid = false;
+
+                float speed = 1.0f;
+                dx = dir_x * speed;
+                dy = dir_y * speed;
+
+                this.life_span = life_span;
+
+                // Currently assuming that a 0,0 direction is an error, but might want to remove this if we ever
+                // want just a floating projectile.
+                System.Diagnostics.Debug.Assert(dir_x != 0 || dir_y != 0);
+            }
+
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                if (life_span <= 0)
+                {
+                    inst.objs_remove_queue.Add(this);
+                    return;
+                }
+
+                for(int i = 0; i < inst.objs.Count; i++)
+                {
+                    platform o = inst.objs[i] as platform;
+                    if (o != null)
+                    {
+                        if( inst.intersects_obj_obj(this, o))
+                        {
+                            inst.objs_remove_queue.Add(this);
+                            inst.objs_add_queue.Add(new simple_fx_projectile_death() { x = x, y = y });
+                            return;
+                        }
+                    }
+                    
+                }
+
+                // Hit a wall?
+                if (fget(mget_tiledata(flr(x / 8.0f), flr(y / 8.0f)), 0))
+                {
+                    inst.objs_remove_queue.Add(this);
+                    inst.objs_add_queue.Add(new simple_fx_projectile_death() { x = x, y = y });
+                    return;
+                }
+
+                base._update60();
+
+                life_span--;
             }
         }
 
@@ -1943,6 +2201,91 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class geyser : sprite
+        {
+            float dir_x;
+            float dir_y;
+
+            int sprite_id;
+
+            public geyser(float x, float y, int w, int h, float dir_x, float dir_y) : base()
+            {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.cw = w;
+                this.h = h;
+                this.ch = h;
+
+                this.dir_x = dir_x;
+                this.dir_y = dir_y;
+
+                if (dir_x == 0)
+                {
+                    sprite_id = 704;
+
+                    if (dir_y < 0)
+                    {
+                        flipy = true;
+                    }
+                }
+                else
+                {
+                    sprite_id = 736;
+
+                    if (dir_x < 0)
+                    {
+                        flipx = true;
+                    }
+                }
+            }
+
+            public override void _update60()
+            {
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                var touching_player = inst.intersects_box_box(inst.pc.pawn.cx, inst.pc.pawn.cy + inst.pc.pawn.ch * 0.5f, inst.pc.pawn.cw * 0.5f, 1, cx, cy, cw * 0.5f, (ch + 2) * 0.5f);
+
+                if (touching_player)
+                {
+                    // Can't use dx for x direction because it gets zero'd out if you are not moving.
+                    inst.pc.pawn.x += (dir_x * 4.0f); //(dir_x * 0.3f);
+                    inst.pc.pawn.dy += (dir_y * 0.3f);
+                }
+
+                base._update60();
+            }
+
+            public override void _draw()
+            {
+                sprfxset(2, true);
+                int tile_w = flr(w / 8.0f);
+                int tile_h = flr(h / 8.0f);
+
+                float start_x = x - w * 0.5f;
+                float start_y = y - h * 0.5f;
+
+                Point meta_start_pos = inst.map_pos_to_meta_tile(flr(start_x / 8.0f), flr(start_y / 8.0f));
+
+                int sprite_offset = flr((inst.time_in_state % 15) / 5.0f) * 2;
+
+                for (int i =0; i < tile_w; i+=2)
+                {
+                    for(int j = 0; j < tile_h; j+=2)
+                    {
+                        spr(sprite_id + sprite_offset, (meta_start_pos.X + i) * 8.0f, (meta_start_pos.Y + j) * 8.0f, 2, 2, flipx, flipy);
+                    }
+                }
+
+                //rect(x - w * 0.5f, y - h * 0.5f, x + w * 0.5f, y + h * 0.5f, 0);
+                //base._draw();
+                sprfxset(2, false);
+            }
+        }
+
         public class player_top : player_pawn
         {
             public float dest_x = 0;
@@ -2266,11 +2609,25 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 found_artifacts = (artifacts)dget((uint)Game1.cartdata_index.artifacts);
             }
 
+            public override void _preupdate()
+            {
+                base._preupdate();
+
+                pawn?._preupdate();
+            }
+
             public override void _update60()
             {
                 base._update60();
 
                 pawn?._update60();
+            }
+
+            public override void _postupdate()
+            {
+                base._postupdate();
+
+                pawn?._postupdate();
             }
 
             public override void _draw()
@@ -2328,7 +2685,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 int gem_count = 0;
                 uint gems_found_cache = found_gems;
 
-                printh("get_gem_count: " + Convert.ToString(gems_found_cache, 2));
+                //printh("get_gem_count: " + Convert.ToString(gems_found_cache, 2));
 
                 // Loop through each bit to see which contain a found gem.
                 for (int i = 0; i < 32; i++)
@@ -2483,8 +2840,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             bool in_water = false;
             int in_water_timer = 0;
-            int time_before_water_damage_start = 60;
-            const int time_between_water_damage = 120;
+            int time_before_water_damage_start = 240;
+            const int time_between_water_damage = 60;
 
             // The direction of the current dash. If not dashing,
             // this will be zero.
@@ -2660,7 +3017,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.arc))
                 {
-                    inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
+                    //inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
                     Point map_point = inst.map_pos_to_meta_tile(mx, my);
                     inst.objs_add_queue.Add(new rock_pendulum(Math.Sign(hit_point.X - x)) { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8 });
                 }
@@ -2888,7 +3245,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         dy = dash_speed * 4;
                     }
                 }
-                else if (!platformed)
+                else if (!platformed && !controller.DEBUG_fly_enabled)
                 {
                     //limit walk speed
                     self.dx = mid(-self.max_dx, self.dx, self.max_dx);
@@ -3230,6 +3587,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 base._update60();
             }
 
+            public override void _postupdate()
+            {
+                base._postupdate();
+            }
+
             public override void adjust_hp(float damage_amount)
             {
                 hp += damage_amount;
@@ -3359,6 +3721,42 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         }
                     }
                     base._draw();
+                }
+            }
+        }
+
+        // Object used to manage multiple cameras in a single level.
+        public class cam_manager : PicoXObj
+        {
+            public List<cam> cameras = new List<cam>();
+
+            public cam queued_cam;
+            public int queued_ticks;
+
+            public override void _update60()
+            {
+                base._update60();
+
+                queued_ticks++;
+
+                if (inst.pc.pawn != null)
+                {
+                    for (int i = 0; i < cameras.Count; i++)
+                    {
+                        cam c = cameras[i];
+                        if (c != inst.game_cam && c != queued_cam)
+                        {
+                            if (c.is_pos_in_play_area(inst.pc.pawn.x, inst.pc.pawn.y))
+                            {
+                                queued_ticks = 0;
+                                queued_cam = c;
+                                c.jump_to_target();
+                                // force an update to get it in the starting position.
+                                c._update60();
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -3522,6 +3920,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public bool is_obj_off_screen(sprite s)
             {
+                if (s is player_controller)
+                {
+                    s = (s as player_controller).pawn;
+                }
                 return !inst.intersects_obj_box(s, pos.X, pos.Y, inst.Res.X * 0.5f, inst.Res.Y * 0.5f);
             }
 
@@ -3534,6 +3936,26 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 Vector2 play_area_size = (play_area_max - play_area_min) * 0.5f;
                 return inst.intersects_point_box(x, y, play_area_min.X + play_area_size.X, play_area_min.Y + play_area_size.Y, play_area_size.X, play_area_size.Y);
+            }
+
+            public bool is_obj_in_play_area(sprite s)
+            {
+                if (s is player_controller)
+                {
+                    s = (s as player_controller).pawn;
+                }
+                Vector2 play_area_size = (play_area_max - play_area_min) * 0.5f;
+                return inst.intersects_obj_box(s, play_area_min.X + play_area_size.X, play_area_min.Y + play_area_size.Y, play_area_size.X, play_area_size.Y);
+            }
+
+            public bool is_obj_in_play_area(sprite s, Vector2 offset)
+            {
+                if (s is player_controller)
+                {
+                    s = (s as player_controller).pawn;
+                }
+                Vector2 play_area_size = (play_area_max - play_area_min) * 0.5f;
+                return inst.intersects_obj_box(s, play_area_min.X + play_area_size.X + offset.X, play_area_min.Y + play_area_size.Y + offset.Y, play_area_size.X, play_area_size.Y);
             }
         }
 
@@ -4011,7 +4433,35 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         });
                 }
             }
-            inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
+
+            bool water = false;
+            // Don't check below because water doesn't rise.
+            for (int y = -2; y <= 0; y += 2)
+            {
+                for (int x = -2; x <= 2; x += 2)
+                {
+                    // Only do up down left and right.
+                    if (abs(x) == abs(y))
+                    {
+                        continue;
+                    }
+                    int fmx = grid_pos.X + x;
+                    int fmy = grid_pos.Y + y;
+                    if (inst.is_packed_tile(fget(mget_tiledata(fmx, fmy)), packed_tile_types.water))
+                    {
+                        water = true;
+                    }
+                }
+            }
+
+            if (!water)
+            {
+                inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
+            }
+            else
+            {
+                inst.change_meta_tile(mx, my, new int[] { 50, 51, 50, 51 }, 1);
+            }
 
             if (with_explode)
             {
@@ -4650,6 +5100,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         player_controller pc;
         cam game_cam;
+        cam_manager game_cam_man;
 
         List<PicoXObj> objs;
         List<PicoXObj> objs_remove_queue;
@@ -4754,6 +5205,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             objs_add_queue.Clear();
 
             cur_map_config = new map_config();
+            game_cam_man = new cam_manager();
 
             reloadmap(GetMapString());
 
@@ -4868,11 +5320,50 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         {
                             pull_threshold_offset_y = 0.0f;
                         }
+
+                        const int hud_height = 16;
+
+                        // Account for the fact that the camera area can be smaller than the game resolution.
+                        // This could be fixed in content by always setting a min cam size of ResX/Y, but this
+                        // allows us to change the resolution without having to update content.
+                        Vector2 cam_area_min_og = cam_area_min;
+                        Vector2 cam_area_max_og = cam_area_max;
+                        Vector2 cam_area = cam_area_max - cam_area_min;
+                        Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
+
+                        // Is the camera area smaller than the resolution? If so, adjust it (while keeping
+                        // it centered around the same point) to match the resolution.
+                        // NOTE: At time of writing we still render the map outside the camera area.
+                        if (cam_area.X < Res.X)
+                        {
+                            cam_area_min.X -= cam_delta_half.X;
+                            cam_area_max.X += cam_delta_half.X;
+                        }
+                        if (cam_area.Y < Res.Y)
+                        {
+                            cam_area_min.Y -= cam_delta_half.Y - 8;
+                            cam_area_max.Y += cam_delta_half.Y - 8;
+                        }
+
+                        cam new_cam = new cam(pc)
+                        {
+                            pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
+                            pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+                            play_area_min = cam_area_min_og,
+                            play_area_max = cam_area_max_og,
+                            pull_threshold_offset = new Vector2(0, pull_threshold_offset_y),
+                        };
+                        if (cur_map_config.is_tower)
+                        {
+                            new_cam.pull_threshold = 0;
+                        }
+                        //game_cam.jump_to_target();
+                        game_cam_man.cameras.Add(new_cam);
                     }
                     else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
                     {
                         objs_add_queue.Add(
-                                new chopper()
+                                new chopper(Int32.Parse(o.Properties["duration"]), Int32.Parse(o.Properties["dist"]))
                                 {
                                     x = (float)o.X + ((float)o.Width * 0.5f),
                                     y = (float)o.Y + ((float)o.Height * 0.5f),
@@ -4908,6 +5399,46 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                                     y = (float)o.Y + ((float)o.Height * 0.5f),
                                 }
                             );
+                    }
+                    else if (string.Compare(o.Type, "spawn_dart_gun", true) == 0)
+                    {
+                        string start_delay_string = "0";
+                        int start_delay = 0;
+                        if (o.Properties.TryGetValue("start_delay", out start_delay_string))
+                        {
+                            start_delay = int.Parse(start_delay_string);
+                        }
+
+                        // A simplified way to have a somewhat synchronized start delay across multiple objects.
+                        // Each object should have the same start_delay property, but then the start_delay_index
+                        // can be incremented across the objects.
+                        string start_delay_index_string = "0";
+                        if (o.Properties.TryGetValue("start_delay_index", out start_delay_index_string))
+                        {
+                            start_delay *= int.Parse(start_delay_index_string);
+                        }
+
+                        dart_gun d = new dart_gun(float.Parse(o.Properties["dir_x"]), float.Parse(o.Properties["dir_y"]))
+                        {
+                            x = (float)o.X + ((float)o.Width * 0.5f),
+                            y = (float)o.Y + ((float)o.Height * 0.5f),
+                            start_delay = start_delay,
+                        };
+
+                        // Only set these if the property exists, so that it can fallback to class defaults.
+                        string firing_delay_string = "0";
+                        if (o.Properties.TryGetValue("firing_delay", out firing_delay_string))
+                        {
+                            d.firing_delay = int.Parse(firing_delay_string);
+                        }
+                        
+                        objs_add_queue.Add(d);
+                    }
+                    else if (string.Compare(o.Type, "spawn_geyser", true) == 0)
+                    {
+                        geyser g = new geyser((float)o.X + (float)o.Width * 0.5f, (float)o.Y + ((float)o.Height * 0.5f), (int)o.Width, (int)o.Height, float.Parse(o.Properties["dir_x"]), float.Parse(o.Properties["dir_y"]));
+
+                        objs_add_queue.Add(g);
                     }
                     else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
                     {
@@ -5059,43 +5590,51 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 pc.possess(pawn);
             }
 
-            const int hud_height = 16;
+            //const int hud_height = 16;
 
-            // Account for the fact that the camera area can be smaller than the game resolution.
-            // This could be fixed in content by always setting a min cam size of ResX/Y, but this
-            // allows us to change the resolution without having to update content.
-            Vector2 cam_area_min_og = cam_area_min;
-            Vector2 cam_area_max_og = cam_area_max;
-            Vector2 cam_area = cam_area_max - cam_area_min;
-            Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
+            //// Account for the fact that the camera area can be smaller than the game resolution.
+            //// This could be fixed in content by always setting a min cam size of ResX/Y, but this
+            //// allows us to change the resolution without having to update content.
+            //Vector2 cam_area_min_og = cam_area_min;
+            //Vector2 cam_area_max_og = cam_area_max;
+            //Vector2 cam_area = cam_area_max - cam_area_min;
+            //Vector2 cam_delta_half = (Res - cam_area) * 0.5f;
 
-            // Is the camera area smaller than the resolution? If so, adjust it (while keeping
-            // it centered around the same point) to match the resolution.
-            // NOTE: At time of writing we still render the map outside the camera area.
-            if (cam_area.X < Res.X)
-            {
-                cam_area_min.X -= cam_delta_half.X;
-                cam_area_max.X += cam_delta_half.X;
-            }
-            if (cam_area.Y < Res.Y)
-            {
-                cam_area_min.Y -= cam_delta_half.Y - 8;
-                cam_area_max.Y += cam_delta_half.Y - 8;
-            }
+            //// Is the camera area smaller than the resolution? If so, adjust it (while keeping
+            //// it centered around the same point) to match the resolution.
+            //// NOTE: At time of writing we still render the map outside the camera area.
+            //if (cam_area.X < Res.X)
+            //{
+            //    cam_area_min.X -= cam_delta_half.X;
+            //    cam_area_max.X += cam_delta_half.X;
+            //}
+            //if (cam_area.Y < Res.Y)
+            //{
+            //    cam_area_min.Y -= cam_delta_half.Y - 8;
+            //    cam_area_max.Y += cam_delta_half.Y - 8;
+            //}
 
-            game_cam = new cam(pc)
+            //game_cam = new cam(pc)
+            //{
+            //    pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
+            //    pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
+            //    play_area_min = cam_area_min_og,
+            //    play_area_max = cam_area_max_og,
+            //    pull_threshold_offset = new Vector2(0, pull_threshold_offset_y),
+            //};
+            //if (cur_map_config.is_tower)
+            //{
+            //    game_cam.pull_threshold = 0;
+            //}
+            //game_cam.jump_to_target();
+
+            game_cam_man._update60();
+            if (game_cam_man.queued_cam != null)
             {
-                pos_min = cam_area_min + new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f - hud_height),
-                pos_max = cam_area_max - new Vector2(inst.Res.X * 0.5f, inst.Res.Y * 0.5f),
-                play_area_min = cam_area_min_og,
-                play_area_max = cam_area_max_og,
-                pull_threshold_offset = new Vector2(0, pull_threshold_offset_y),
-            };
-            if (cur_map_config.is_tower)
-            {
-                game_cam.pull_threshold = 0;
+                game_cam = game_cam_man.queued_cam;
+                game_cam_man.queued_cam = null;
+                game_cam.jump_to_target();
             }
-            game_cam.jump_to_target();
 
             foreach (PicoXObj o in objs_add_queue)
             {
@@ -5417,6 +5956,26 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             return t[flr(rnd(4))];// fade_table[1][pget(x, y)];
         }
 
+
+
+        public int sprfx_fade(int x, int y, int c)
+        {
+            // Don't do anything with transparent pixels.
+            // TODO: Check if c == palt value.
+            if (c == 11 || c == 7) return c;
+
+            // Dither:
+            //if (x % 2 == 0 && y % 2 == 0 || x % 2 == 1 && y % 2 == 1)
+            //{
+            //    return 19;
+            //}
+
+            // Look at the color already at this location and use that color
+            // but faded out slightly.
+            //int[] t = new int[] { 0, 5, 6, 7 };
+            return fade_table[1][pget(x, y)];
+        }
+
         public int sprfx_tower_fade(int x, int y, int c)
         {
             if (c == 11 || inst.pc.pawn == null) return c;
@@ -5550,6 +6109,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             sprfxadd(sprfx_camo_warp, 0);
             sprfxadd(sprfx_tower_fade, 1);
+            sprfxadd(sprfx_fade, 2);
 
             objs = new List<PicoXObj>();
             objs_remove_queue = new List<PicoXObj>();
@@ -5690,6 +6250,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         //    game_cam.shake((int)rnd(30) + 30, 1);
                         //}
 
+                        if (game_cam_man.queued_cam != null)
+                        {
+                            hit_pause.start_pause(hit_pause_manager.pause_reason.level_trans);
+                        }
 #if DEBUG
                         if (next_tenth_level_key.Update())
                         {
@@ -5795,7 +6359,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         continue;
                     }
                 }
-
                 objs.Add(objs_add_queue[i]);
                 objs_add_queue.RemoveAt(i);
             }
@@ -5803,6 +6366,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             //objs.AddRange(objs_add_queue);
             //objs_add_queue.Clear();
 
+            game_cam_man._update60();
             if (game_cam != null)
             {
                 game_cam._update60();
@@ -5823,7 +6387,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             ui_scene._update60();
 
-            if (queued_map != GetMapString() && cur_game_state != game_state.level_trans_exit && cur_game_state != game_state.level_trans_enter)
+            if ((active_map_link != null || queued_map != GetMapString()) && cur_game_state != game_state.level_trans_exit && cur_game_state != game_state.level_trans_enter)
             {
                 set_game_state(game_state.level_trans_exit);
             }
@@ -5837,10 +6401,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             cls(0);
 
             Vector2 final_cam = Vector2.Zero;
+            Vector2 offset = Vector2.Zero;
 
             if (game_cam != null)
             {
-                Vector2 offset = Vector2.Zero;
 
                 if (active_map_link != null && active_map_link.trans_dir != map_link.transition_dir.none)
                 {
@@ -5883,6 +6447,22 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         }
                     }
                 }
+
+                if (game_cam_man.queued_cam != null)
+                {
+                    float amount = (float)(game_cam_man.queued_ticks) / (float)(level_trans_time * 3);
+
+                    Vector2 delta = game_cam_man.queued_cam.cam_pos() - game_cam.cam_pos();
+                    offset = Vector2.SmoothStep(Vector2.Zero, delta, amount);
+                    //offset = delta * 0.1f;
+                    if (amount >= 1.0f)
+                    {
+                        offset = Vector2.Zero;
+                        game_cam = game_cam_man.queued_cam;
+                        game_cam_man.queued_cam = null;
+                    }
+                }
+
                 final_cam = new Vector2(game_cam.cam_pos().X + offset.X, game_cam.cam_pos().Y + offset.Y);
             }
 
@@ -6027,9 +6607,12 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 if (o is sprite)
                 {
-                    (o as sprite).push_pal();
-                    o._draw();
-                    (o as sprite).pop_pal();
+                    if (game_cam == null || game_cam.is_obj_in_play_area(o as sprite, offset))
+                    {
+                        (o as sprite).push_pal();
+                        o._draw();
+                        (o as sprite).pop_pal();
+                    }
                 }
             }
 

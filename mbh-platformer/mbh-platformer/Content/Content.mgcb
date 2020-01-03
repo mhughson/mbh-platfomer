@@ -94,6 +94,9 @@
 #begin raw/map_ss_india_05.tmx
 /copy:raw/map_ss_india_05.tmx
 
+#begin raw/map_ss_mega_map_test.tmx
+/copy:raw/map_ss_mega_map_test.tmx
+
 #begin raw/map_ss_tower_00.tmx
 /copy:raw/map_ss_tower_00.tmx
 
@@ -105,6 +108,9 @@
 
 #begin raw/map_ss_tower_03.tmx
 /copy:raw/map_ss_tower_03.tmx
+
+#begin raw/map_ss_tower_04.tmx
+/copy:raw/map_ss_tower_04.tmx
 
 #begin raw/map_ss_vert_template.tmx
 /copy:raw/map_ss_vert_template.tmx
