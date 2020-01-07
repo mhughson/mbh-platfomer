@@ -213,10 +213,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         if (cur_index == 0)
                         {
                             // Clear the save game...
-                            for (uint i = 0; i < 64; i++)
-                            {
-                                dset(i, 0);
-                            }
+                            inst.clear_save();
                             inst.pc.reload();
                         }
                         inst.queued_map = "Content/raw/map_ow_top.tmx";
@@ -6081,6 +6078,19 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         star[] stars = new star[128];
 
+        public int cur_save_version = 1;
+        public void clear_save()
+        {
+            // Zero's out all cartdata. Could do more complex logic if needed.
+            for (uint i = 0; i < 64; i++)
+            {
+                dset(i, 0);
+            }
+
+            // version should be set, even on a clear save.
+            dset((uint)cartdata_index.version, cur_save_version);
+        }
+
         public override void _init()
         {
             debug_map_list = populate_map_list();
@@ -6089,27 +6099,22 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             cartdata("mbh-platformer");
 
             // Zero's out all cartdata. Could do more complex logic if needed.
-            Action clear_save = delegate ()
+            Action clear_save_del = delegate ()
             {
-                for (uint i = 0; i < 64; i++)
-                {
-                    dset(i, 0);
-                }
+                clear_save();
             };
 
             // Add ability for user to clear save data.
-            menuitem(1, "clear save", clear_save);
+            menuitem(1, "clear save", clear_save_del);
 
             int ver = dget((uint)cartdata_index.version);
 
             // If this is an old version, clear it.
             // Ideally this would not just clear the save but rather "upgrade it".
-            if (ver < 1)
+            if (ver < cur_save_version)
             {
                 clear_save();
             }
-
-            dset((uint)cartdata_index.version, 1);
 
             sprfxadd(sprfx_camo_warp, 0);
             sprfxadd(sprfx_tower_fade, 1);
@@ -6217,7 +6222,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
                 else
                 {
-                    inst.pc.found_gems = int.MaxValue;
+                    inst.pc.found_gems = UInt32.MaxValue;
                 }
             }
 #endif
