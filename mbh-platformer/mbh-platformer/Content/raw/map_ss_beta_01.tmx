@@ -58,7 +58,15 @@
     <property name="id" value="dash_pack"/>
    </properties>
   </object>
-  <object id="9" name="gem" type="gem" x="224" y="48" width="16" height="16"/>
-  <object id="11" name="gem" type="gem" x="352" y="48" width="16" height="16"/>
+  <object id="9" name="gem" type="gem" x="224" y="48" width="16" height="16">
+   <properties>
+    <property name="ID" type="int" value="4"/>
+   </properties>
+  </object>
+  <object id="11" name="gem" type="gem" x="352" y="48" width="16" height="16">
+   <properties>
+    <property name="ID" type="int" value="5"/>
+   </properties>
+  </object>
  </objectgroup>
 </map>

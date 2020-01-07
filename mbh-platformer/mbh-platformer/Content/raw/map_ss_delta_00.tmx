@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.5" orientation="orthogonal" renderorder="right-down" width="60" height="160" tilewidth="8" tileheight="8" infinite="0" nextlayerid="16" nextobjectid="28">
+<map version="1.2" tiledversion="1.3.1" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="60" height="160" tilewidth="8" tileheight="8" infinite="0" nextlayerid="16" nextobjectid="28">
  <properties>
   <property name="darkness_level" type="int" value="0"/>
   <property name="level_id" type="int" value="3"/>
@@ -378,7 +378,11 @@
     <property name="dir" type="int" value="1"/>
    </properties>
   </object>
-  <object id="15" name="gem" type="gem" x="24" y="696" width="16" height="16"/>
+  <object id="15" name="gem" type="gem" x="24" y="696" width="16" height="16">
+   <properties>
+    <property name="ID" type="int" value="6"/>
+   </properties>
+  </object>
   <object id="16" name="checkpoint" type="spawn_checkpoint" x="256" y="912" width="32" height="32"/>
   <object id="17" name="checkpoint" type="spawn_checkpoint" x="416" y="912" width="32" height="32"/>
   <object id="18" name="rolley" type="spawn_rolley" x="432" y="944" width="16" height="16">

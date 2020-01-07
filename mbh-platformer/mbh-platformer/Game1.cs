@@ -4556,7 +4556,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     printh("found gem (before): " + Convert.ToString(inst.pc.found_gems, 2));
 
-                    UInt32 gem_mask = (UInt32)1 << id + (inst.gems_per_level * inst.cur_level_id);
+                    UInt32 gem_mask = (UInt32)1 << id;// + (inst.gems_per_level * inst.cur_level_id);
 
                     inst.pc.found_gems |= gem_mask;
 
@@ -5558,13 +5558,17 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
                     else if (string.Compare(o.Type, "gem", true) == 0)
                     {
-                        System.Diagnostics.Debug.Assert(cur_level_id >= 0);
-                        System.Diagnostics.Debug.Assert(gem_id < gems_per_level);
+                        // New logic with id embedded in object.
+                        string IDString = o.Properties["ID"];
+                        gem_id = int.Parse(IDString);
+
+                        //System.Diagnostics.Debug.Assert(cur_level_id >= 0);
+                        //System.Diagnostics.Debug.Assert(gem_id < gems_per_level);
 
                         // Max of 4 gems per level.
-                        if (gem_id < gems_per_level)
+                        //if (gem_id < gems_per_level)
                         {
-                            UInt32 gem_mask = (UInt32)1 << gem_id + (gems_per_level * cur_level_id);
+                            UInt32 gem_mask = (UInt32)1 << gem_id;// + (gems_per_level * cur_level_id);
 
                             if ((inst.pc.found_gems & gem_mask) == 0)
                             {

@@ -52,7 +52,11 @@
    </properties>
   </object>
   <object id="5" name="checkpoint" type="spawn_checkpoint" x="40" y="168" width="32" height="32"/>
-  <object id="6" name="gem" type="gem" x="32" y="48" width="16" height="16"/>
+  <object id="6" name="gem" type="gem" x="32" y="48" width="16" height="16">
+   <properties>
+    <property name="ID" type="int" value="2"/>
+   </properties>
+  </object>
   <object id="7" name="checkpoint" type="spawn_checkpoint" x="704" y="32" width="32" height="32"/>
   <object id="8" name="checkpoint" type="spawn_checkpoint" x="224" y="64" width="32" height="32"/>
   <object id="9" name="checkpoint" type="spawn_checkpoint" x="784" y="144" width="32" height="32"/>
@@ -68,6 +72,10 @@
     <property name="type" value="side"/>
    </properties>
   </object>
-  <object id="12" name="gem" type="gem" x="512" y="192" width="16" height="16"/>
+  <object id="12" name="gem" type="gem" x="512" y="192" width="16" height="16">
+   <properties>
+    <property name="ID" type="int" value="3"/>
+   </properties>
+  </object>
  </objectgroup>
 </map>
