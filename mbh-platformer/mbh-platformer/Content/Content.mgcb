@@ -94,9 +94,6 @@
 #begin raw/map_ss_india_05.tmx
 /copy:raw/map_ss_india_05.tmx
 
-#begin raw/map_ss_mega_map_test.tmx
-/copy:raw/map_ss_mega_map_test.tmx
-
 #begin raw/map_ss_tower_00.tmx
 /copy:raw/map_ss_tower_00.tmx
 
@@ -249,7 +246,4 @@
 
 #begin raw/test_map_hall_top.tmx
 /copy:raw/test_map_hall_top.tmx
-
-#begin raw/test_template.tx
-/copy:raw/test_template.tx
 

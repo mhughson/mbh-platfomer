@@ -672,6 +672,35 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class simple_fx_dust : simple_fx
+        {
+            public simple_fx_dust()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "explode",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks=4,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(456, 2, 2),
+                                create_anim_frame(458, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("explode");
+                
+                w = 16;
+                h = 16;
+            }
+        }
+
         public class simple_fx_particle : simple_fx
         {
             public simple_fx_particle(float dir_x, float dir_y, int sprite_id)
@@ -2590,8 +2619,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             // TODO: Add ability to dynamically calculate how many gems are in game.
             // TODO: Expand to support more levels.
             // TODO: Possibly expand the support variable numbers of gems per level.
-            public UInt32 found_gems;
-            
+            public UInt32 found_gems_00;
+            public UInt32 found_gems_01;
+
             public bool DEBUG_fly_enabled = false;
             public bool DEBUG_god_enabled = false;
 
@@ -2602,7 +2632,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public void reload()
             {
-                found_gems = (uint)dget((uint)Game1.cartdata_index.gems);
+                found_gems_00 = (uint)dget((uint)Game1.cartdata_index.gems_00);
+                found_gems_01 = (uint)dget((uint)Game1.cartdata_index.gems_01);
                 found_artifacts = (artifacts)dget((uint)Game1.cartdata_index.artifacts);
             }
 
@@ -2680,7 +2711,16 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public int get_gem_count()
             {
                 int gem_count = 0;
-                uint gems_found_cache = found_gems;
+
+                gem_count += get_gem_count_in_group(found_gems_00);
+                gem_count += get_gem_count_in_group(found_gems_01);
+
+                return gem_count;
+            }
+
+            private int get_gem_count_in_group(uint gems_found_cache)
+            {
+                int gem_count = 0;
 
                 //printh("get_gem_count: " + Convert.ToString(gems_found_cache, 2));
 
@@ -2691,6 +2731,25 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     gems_found_cache = gems_found_cache >> 1;
                 }
                 return gem_count;
+            }
+
+            public bool is_gem_found(int id)
+            {
+
+                // Store prior to modding value.
+                int cached_id = id;
+                id %= 32;
+
+                UInt32 gem_mask = (UInt32)1 << id;// + (inst.gems_per_level * inst.cur_level_id);
+
+                if (cached_id <= 31)
+                {
+                    return (inst.pc.found_gems_00 & gem_mask) != 0;
+                }
+                else
+                {
+                    return (inst.pc.found_gems_01 & gem_mask) != 0;
+                }
             }
         }
 
@@ -2734,6 +2793,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             water = 4,
             rock_smash = 5,
             pass_through = 6,
+            dissolving = 7,
             no_bouce = 8,
         }
 
@@ -2846,6 +2906,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             Queue<sprite> player_hist = new Queue<sprite>(60);
             bool is_hist = false;
+
+            Dictionary<Point, float> dissolve_tracker = new Dictionary<Point, float>();
 
             public player_side() : base()
             {
@@ -3010,7 +3072,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.vanishing))
                 {
                     inst.change_meta_tile(mx, my, new int[] { 836, 837, 852, 853 }, 0);
-                    inst.objs_add_queue.Add(new block_restorer(mx, my, 240));
+                    inst.objs_add_queue.Add(new block_restorer(mx, my, 240, packed_tile_types.vanishing));
                 }
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.arc))
                 {
@@ -3438,7 +3500,33 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
                 else
                 {
+                    if (inst.is_packed_tile(grounded, packed_tile_types.dissolving))
+                    {
+                        Point meta_pos = inst.map_pos_to_meta_tile(flr(hit_point.X / 8), flr(hit_point.Y / 8));
+                        if (dissolve_tracker.ContainsKey(meta_pos))
+                        {
+                            dissolve_tracker[meta_pos]++;
+                        }
+                        else
+                        {
+                            dissolve_tracker.Add(meta_pos, 1);
+                        }
+
+                        if (inst.time_in_state % 10 == 0)
+                        {
+                            inst.objs_add_queue.Add(new simple_fx_dust() { x = hit_point.X + rnd(4), y = hit_point.Y + rnd(4) });
+                        }
+
+                        if (dissolve_tracker[meta_pos] > 30)
+                        {
+                            inst.change_meta_tile(flr(hit_point.X / 8), flr(hit_point.Y / 8), new int[] { 836, 837, 852, 853 }, 0);
+                            dissolve_tracker.Remove(meta_pos);
+                            inst.objs_add_queue.Add(new block_restorer(meta_pos.X, meta_pos.Y, 240, packed_tile_types.dissolving));
+                        }
+                    }
+
                     jump_count = 0;
+
                     // Are we downward dashing?
                     if (dash_dir.Y > 0 & is_dashing)
                     {
@@ -4344,12 +4432,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public int map_x;
             public int map_y;
             public int time_remaining;
+            packed_tile_types type;
 
-            public block_restorer(int map_x, int map_y, int life_span) : base()
+            public block_restorer(int map_x, int map_y, int life_span, packed_tile_types type) : base()
             {
                 this.map_x = map_x;
                 this.map_y = map_y;
                 time_remaining = life_span;
+                this.type = type;
             }
 
             public override void _update60()
@@ -4360,7 +4450,20 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (time_remaining <= 0)
                 {
-                    inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851 }, 0);
+                    switch(type)
+                    {
+                        case packed_tile_types.vanishing:
+                            {
+                                inst.change_meta_tile(map_x, map_y, new int[] { 834, 835, 850, 851 }, 0);
+                                break;
+                            }
+
+                        case packed_tile_types.dissolving:
+                            {
+                                inst.change_meta_tile(map_x, map_y, new int[] { 40, 41, 56, 57 }, 1);
+                                break;
+                            }
+                    }
                     inst.objs_remove_queue.Add(this);
                 }
             }
@@ -4551,14 +4654,32 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (inst.intersects_obj_obj(inst.pc.pawn, this))
                 {
-                    printh("found gem (before): " + Convert.ToString(inst.pc.found_gems, 2));
+                    printh("found gem (before): " + Convert.ToString(inst.pc.found_gems_00, 2) + ", " + Convert.ToString(inst.pc.found_gems_01, 2));
+
+                    // Store prior to modding value.
+                    int cached_id = id;
+
+                    Action<UInt32> set_mask = delegate (UInt32 mask)
+                    {
+                        if (cached_id <= 31)
+                        {
+                            inst.pc.found_gems_00 |= mask;
+                        }
+                        else
+                        {
+                            inst.pc.found_gems_01 |= mask;
+                        }
+                    };
+
+                    // value from 0-31
+                    id %= 32;
 
                     UInt32 gem_mask = (UInt32)1 << id;// + (inst.gems_per_level * inst.cur_level_id);
 
-                    inst.pc.found_gems |= gem_mask;
+                    set_mask(gem_mask);
 
                     printh("found gem (mask): " + Convert.ToString(gem_mask, 2));
-                    printh("found gem (after): " + Convert.ToString(inst.pc.found_gems, 2));
+                    printh("found gem (after): " + Convert.ToString(inst.pc.found_gems_00, 2) + ", " + Convert.ToString(inst.pc.found_gems_01, 2));
 
                     //                    dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
 
@@ -5041,7 +5162,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     if (!touching)
                     {
-                        dset((uint)Game1.cartdata_index.gems, (int)inst.pc.found_gems);
+                        dset((uint)Game1.cartdata_index.gems_00, (int)inst.pc.found_gems_00);
+                        dset((uint)Game1.cartdata_index.gems_01, (int)inst.pc.found_gems_01);
                         dset((uint)Game1.cartdata_index.artifacts, (int)inst.pc.found_artifacts);
 
                         if (!is_activated)
@@ -5177,10 +5299,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         public enum cartdata_index : uint
         {
             version = 0,
-            gems = 1,
+            gems_00 = 1,
             artifacts = 2,
             ship_map_pos_packed = 3,
             overworld_pos_packed = 4,
+            gems_01 = 5,
         }
 
         public Game1() : base()
@@ -5565,9 +5688,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         // Max of 4 gems per level.
                         //if (gem_id < gems_per_level)
                         {
-                            UInt32 gem_mask = (UInt32)1 << gem_id;// + (gems_per_level * cur_level_id);
+                            //UInt32 gem_mask = (UInt32)1 << gem_id;// + (gems_per_level * cur_level_id);
 
-                            if ((inst.pc.found_gems & gem_mask) == 0)
+                            //if ((inst.pc.found_gems_00 & gem_mask) == 0)
+                            if (!inst.pc.is_gem_found(gem_id))
                             {
                                 gem_pickup gem = new gem_pickup(gem_id)
                                 {
@@ -6216,13 +6340,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             if (toggle_all_gems.Update())
             {
-                if (inst.pc.found_gems > 0)
+                if (inst.pc.get_gem_count() > 0)
                 {
-                    inst.pc.found_gems = 0;
+                    inst.pc.found_gems_00 = 0;
+                    inst.pc.found_gems_01 = 0;
                 }
                 else
                 {
-                    inst.pc.found_gems = UInt32.MaxValue;
+                    inst.pc.found_gems_00 = UInt32.MaxValue;
+                    inst.pc.found_gems_01 = UInt32.MaxValue;
                 }
             }
 #endif

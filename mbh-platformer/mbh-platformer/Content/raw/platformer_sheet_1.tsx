@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.2.5" name="platformer_sheet_1" tilewidth="8" tileheight="8" tilecount="2048" columns="16">
+<tileset version="1.2" tiledversion="1.3.1" name="platformer_sheet_1" tilewidth="8" tileheight="8" tilecount="2048" columns="16">
  <properties>
   <property name="Bank" type="int" value="1"/>
  </properties>
@@ -104,6 +104,16 @@
    <property name="Flag" type="int" value="7"/>
   </properties>
  </tile>
+ <tile id="40">
+  <properties>
+   <property name="Flag" type="int" value="15"/>
+  </properties>
+ </tile>
+ <tile id="41">
+  <properties>
+   <property name="Flag" type="int" value="15"/>
+  </properties>
+ </tile>
  <tile id="48">
   <properties>
    <property name="Flag" type="int" value="17"/>
@@ -132,6 +142,16 @@
  <tile id="53">
   <properties>
    <property name="Flag" type="int" value="7"/>
+  </properties>
+ </tile>
+ <tile id="56">
+  <properties>
+   <property name="Flag" type="int" value="15"/>
+  </properties>
+ </tile>
+ <tile id="57">
+  <properties>
+   <property name="Flag" type="int" value="15"/>
   </properties>
  </tile>
  <tile id="64">
