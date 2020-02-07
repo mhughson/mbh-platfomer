@@ -388,7 +388,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public int bank = 0;
 
-            public struct anim
+            public class anim
             {
                 public int ticks;
                 public int[][] frames;
@@ -887,6 +887,42 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 dx = 0;
                 dy = 0;
+            }
+        }
+
+        public class simple_fx_tile_glimmer : simple_fx
+        {
+            public simple_fx_tile_glimmer() : base()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks = 2,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(512, 2, 2),
+                                create_anim_frame(514, 2, 2),
+                                create_anim_frame(516, 2, 2),
+                                create_anim_frame(518, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+
+                dx = 0;
+                dy = 0;
+
+                bank = 5;
             }
         }
 
@@ -2021,7 +2057,68 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
-        public class platform : sprite
+        public class repeating_sprite : sprite
+        {
+            public repeating_sprite(float x, float y, int width_tiles, int height_tiles, int starting_sprite_id, int bank, int num_frames, int ticks_per_frame)
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=ticks_per_frame,//how long is each frame shown.
+                            //frames = new int[][]
+                            //{
+                            //    // TODO: Support animation.
+                            //   new int[(width_tiles * height_tiles)]
+                            //}
+                        }
+                    },
+                };
+
+                anims["default"].frames = new int[num_frames][];
+
+                for (int frame = 0; frame < num_frames; frame++)
+                {
+                    anims["default"].frames[frame] = new int[(width_tiles * height_tiles)];
+
+                    int frame_starting_sprite_id = starting_sprite_id + (frame * 2);
+
+                    // TODO: Pass in tile information.
+                    for (int i = 0; i < anims["default"].frames[frame].Length; i += 2)
+                    {
+                        bool top = (i / width_tiles) % 2 == 0;
+
+                        if (top)
+                        {
+                            anims["default"].frames[frame][i] = frame_starting_sprite_id;
+                            anims["default"].frames[frame][i + 1] = frame_starting_sprite_id + 1;
+                        }
+                        else
+                        {
+                            anims["default"].frames[frame][i] = frame_starting_sprite_id + 16;
+                            anims["default"].frames[frame][i + 1] = frame_starting_sprite_id + 17;
+                        }
+                        //{ 864, 865, 864, 865, 864, 865, 864, 865, 880, 881, 880, 881, 880, 881, 880, 881, }
+                    }
+                }
+
+                set_anim("default");
+
+                w = width_tiles * 8;
+                h = height_tiles * 8;
+                cw = width_tiles * 8;
+                ch = height_tiles * 8;
+
+                this.x = x_initial = x;
+                this.y = y_initial = y;
+
+                this.bank = bank;
+            }
+        }
+
+        public class platform : repeating_sprite
         {
             protected float tick_x = 0;
             protected float tick_y = 0;
@@ -2058,48 +2155,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             // Function used to move the platform based on the movement style.
             Func<float, float, float, float> MoveFunc;
 
-            public platform(float x, float y, int width_tiles, int dist_tiles_x, int dist_tiles_y, movement_style move_style, int start_delay)
+            public platform(float x, float y, int width_tiles, int dist_tiles_x, int dist_tiles_y, movement_style move_style, int start_delay) 
+                : base(x, y, width_tiles, 2, 864, 0, 1, 1)
             {
-                anims = new Dictionary<string, anim>()
-                {
-                    {
-                        "default",
-                        new anim()
-                        {
-                            ticks=1,//how long is each frame shown.
-                            frames = new int[][]
-                            {
-                               new int[width_tiles * 2]
-                            }
-                        }
-                    },
-                };
-
-                for (int i = 0; i < anims["default"].frames[0].Length; i+=2)
-                {
-                    if (i < anims["default"].frames[0].Length / 2)
-                    {
-                        anims["default"].frames[0][i] = 864;
-                        anims["default"].frames[0][i+1] = 865;
-                    }
-                    else
-                    {
-                        anims["default"].frames[0][i] = 880;
-                        anims["default"].frames[0][i+1] = 881;
-                    }
-                    //{ 864, 865, 864, 865, 864, 865, 864, 865, 880, 881, 880, 881, 880, 881, 880, 881, }
-                }
-
-                set_anim("default");
-
-                w = width_tiles * 8;
-                h = 2 * 8;
-                cw = width_tiles * 8;
-                ch = 2 * 8;
-
-                this.x = x_initial = x;
-                this.y = y_initial = y;
-
                 linear_speed = 0.5f;
                 ticks_per_dir_x = flr(abs((dist_tiles_x * 8.0f) / linear_speed));
                 ticks_per_dir_y = flr(abs((dist_tiles_y * 8.0f) / linear_speed));
@@ -2986,9 +3044,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             //frames= new int[][] { create_anim_frame(60-16, 4, 5, 1), },//what frames are shown.
                             frames= new int[][]
                             {
-                                create_anim_frame(160, 4, 3),
-                                create_anim_frame(164, 4, 3),
-                                //create_anim_frame(168, 4, 3),
+                                //create_anim_frame(160, 4, 3),
+                                //create_anim_frame(164, 4, 3),
+                                create_anim_frame(60, 4, 3),
                             },//what frames are shown.
                         }
                     },
@@ -3043,9 +3101,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 h = 24;
 
                 cw = 16;
-                ch = 24;
+                ch = 24; // 16;
                 //cx_offset = 8;
-                //cy_offset = 6;
+                //cy_offset = 3;
             }
 
             public override void start_dash_bounce(ref Vector2 hit_point)
@@ -3061,6 +3119,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (inst.is_packed_tile(fget(mget_tiledata(mx, my)), packed_tile_types.no_bouce))
                 {
+                    Point map_point = inst.map_pos_to_meta_tile(mx, my);
+                    inst.objs_add_queue.Add(new simple_fx_tile_glimmer() { x = map_point.X * 8 + 8, y = map_point.Y * 8 + 8});
                     return;
                 }
 
@@ -3115,6 +3175,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     dashing_last_frame = false;
                 }
+            }
+
+            private bool is_sliding_under()
+            {
+                return grounded != 0 && mfget(flr(cx / 8), flr(cy / 8) - 2, 0) && dash_time > 0;
             }
 
             //call once per tick.
@@ -3275,7 +3340,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 // falling 
                 if (dash_dir.Y <= 0)
                 {
-                    dash_time = max(0, dash_time - 1);
+                    // While sliding under solid objects, don't let the dash end.
+                    if (is_sliding_under())
+                    {
+                        dash_time = max(1, dash_time - 1);
+                    }
+                    else
+                    {
+                        dash_time = max(0, dash_time - 1);
+                    }
 
                     // If the player is also grounded and not dashing, start to remove the dashing trail.
                     if (grounded != 0 && !get_is_dashing())
@@ -3320,6 +3393,18 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 if (inst.cur_map_config.is_tower)
                 {
                     self.x = (self.x + inst.cur_map_config.map_size_pixels.X) % inst.cur_map_config.map_size_pixels.X;
+                }
+
+                ch = 24;
+                cy_offset = 0;
+
+                if (is_dashing)
+                {
+                    if (grounded != 0)
+                    {
+                        ch = 16;
+                        cy_offset = 4;
+                    }
                 }
 
                 //hit walls
@@ -3384,8 +3469,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 int mod_max_jump_press = in_water && dy < 0 ? max_jump_press * 4 : max_jump_press;
                 float mod_jump_speed = in_water ? jump_speed * 1.0f : jump_speed;
 
+
                 {
-                    if (self.jump_button.is_down)
+                    if (self.jump_button.is_down && !is_sliding_under())
                     {
                         //is player on ground recently.
                         //allow for jump right after 
@@ -3620,7 +3706,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     }
 
                 }
-
+                
                 if (is_dashing)
                 {
                     if (grounded != 0)
@@ -3805,6 +3891,29 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             line(x - 16, y - 16, x - 16 + (32 * percent), y - 16, 7);
                         }
                     }
+
+                    if (!is_hist)
+                    {
+                        float old_x = x;
+                        float old_y = y;
+                        for (int i = -1; i < 2; i++)
+                        {
+                            for (int j = -1; j < 2; j++)
+                            {
+                                if (i != j)
+                                {
+                                    inst.apply_pal(inst.bright_table[3]);
+                                    x = old_x + i;
+                                    y = old_y + j;
+                                    base._draw();
+                                }
+                            }
+                        }
+                        x = old_x;
+                        y = old_y;
+                        pal();
+                    }
+
                     base._draw();
                 }
             }
@@ -5560,6 +5669,16 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                         objs_add_queue.Add(g);
                     }
+                    else if (string.Compare(o.Type, "spawn_repeating_tile", true) == 0)
+                    {
+                        repeating_sprite r = new repeating_sprite((float)o.X + ((float)o.Width * 0.5f), (float)o.Y + ((float)o.Height * 0.5f), (int)(o.Width / 8.0f), (int)(o.Height / 8.0f)
+                            , int.Parse(o.Properties["sprite_id"])
+                            , int.Parse(o.Properties["bank"])
+                            , int.Parse(o.Properties["num_frames"])
+                            , int.Parse(o.Properties["ticks_per_frame"]));
+
+                        objs_add_queue.Add(r);
+                    }
                     else if (string.Compare(o.Type, "spawn_rocket_ship", true) == 0)
                     {
                         rocket_ship r = new rocket_ship()
@@ -7138,7 +7257,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public override List<string> GetSheetPath()
         {
-            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3", @"raw\platformer_sheet_4", };
+            return new List<string>() { @"raw\platformer_sheet", @"raw\platformer_sheet_1", @"raw\platformer_sheet_2", @"raw\platformer_sheet_3", @"raw\platformer_sheet_4", @"raw\platformer_sheet_5", };
         }
 
         public override Dictionary<int, string> GetSoundEffectPaths()

@@ -202,6 +202,21 @@
 #begin raw/platformer_sheet_4.tsx
 /copy:raw/platformer_sheet_4.tsx
 
+#begin raw/platformer_sheet_5.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:raw/platformer_sheet_5.png
+
+#begin raw/platformer_sheet_5.tsx
+/copy:raw/platformer_sheet_5.tsx
+
 #begin raw/rotating_tower_gb.png
 /importer:TextureImporter
 /processor:TextureProcessor
