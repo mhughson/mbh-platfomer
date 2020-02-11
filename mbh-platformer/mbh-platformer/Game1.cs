@@ -947,6 +947,13 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             protected bool has_rock_armor = false;
 
+            // Data used to spawn this object, and eventually used to respawn this object.
+            // If not set, it will not respawn on death.
+            public TmxObject respawn_data;
+
+            // How many ticks to wait before respawn after death.
+            public int respawn_delay;
+
             public badguy(float dir)
             {
                 anims = new Dictionary<string, anim>()
@@ -979,6 +986,24 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 stay_on = true;
 
                 hp = 1;
+            }
+
+            public void delete_object(bool supress_respawn = false)
+            {
+                inst.objs_remove_queue.Add(this);
+
+                if (respawn_data != null && !supress_respawn)
+                {
+                    //TmxObject temp = respawn_data;
+                    Action callback = new Action(() =>
+                    {
+                        // respawn.
+                        inst.ParseTmxObjectToBadGuy(respawn_data);
+                    });
+
+                    timer_callback t = new timer_callback(respawn_delay, callback);
+                    inst.objs_add_queue.Add(t);
+                }
             }
 
             public override void _update60()
@@ -1029,7 +1054,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     if (flying.horz == true)
                     {
                         float start_x = x;
-                        x = x_initial + ((sin(t60 / flying.duration) + 1) * 0.5f) * flying.dist;
+                        // cos goes -1 -> 1 -> -1, so flip that to 1 -> -1 ..., then +1 to
+                        // put it 0 -> 2, then half that for 0 -> 1 -> 0
+                        x = x_initial + ((-cos(t60 / flying.duration) + 1) * 0.5f) * flying.dist;
                         if (x < start_x)
                         {
                             flipx = true;
@@ -1074,9 +1101,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     dead_time -= 1;
 
-                    if (dead_time <= 0)
+                    if (dead_time <= 0/* || !inst.game_cam.is_obj_in_play_area(this)*/)
                     {
-                        inst.objs_remove_queue.Add(this);
+                        // Only play this little explosion anim if we are timing out on the bounced sequence.
+                        // Not for cases like stomping.
+                        if (bounced)
+                        {
+                            inst.objs_add_queue.Add(new simple_fx() { x = x, y = y });
+                        }
+                        delete_object();
                     }
                     else
                     {
@@ -1231,7 +1264,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if ((dead_time == -1 || ignore_dead_time) && hp == 0)
                 {
-                    dead_time = 240;
+                    dead_time = 120; // enough time to clear a screen and a bit.
 
                     dx = Math.Sign(attacker.dx) * 0.5f;
 
@@ -1276,6 +1309,13 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public class chopper_body : badguy
         {
+            // used to track if the body is in free fall, and should be deleted (for respawn
+            // to not get stuck waiting).
+            // Alternatively, we could respawn the chopper when the body gets spawned,
+            // but we will still want to prevent too many from spawning for perf reasons.
+            int ticks = 0;
+            bool landed = false;
+
             public chopper_body() : base(0)
             {
                 anims = new Dictionary<string, anim>()
@@ -1296,10 +1336,28 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 set_anim("default");
             }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                // Handle falling offscreen without ever hitting ground.
+                landed |= grounded != 0;
+
+                ticks++;
+                if (ticks > 60 && !landed)
+                {
+                    inst.objs_add_queue.Add(new simple_fx() { x = x, y = y });
+                    delete_object();
+                }
+            }
         }
 
         public class chopper : badguy
         {
+            // How long the object has been alive, used for fade in on respawn.
+            int lifetime = 0;
+
             public chopper(int duration, int dist) : base(0)
             {
                 flying = new flying_def()
@@ -1353,6 +1411,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     flipx = flipx,
                     dx = 0,
                     dy = 0,
+                    respawn_data = respawn_data,
+                    respawn_delay = respawn_delay,
                 });
                 inst.objs_add_queue.Add(new simple_fx_rotor()
                 {
@@ -1362,7 +1422,34 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     dx = 0,
                     dy = -0.5f,
                 });
-                inst.objs_remove_queue.Add(this);
+
+                // Intentionally don't respawn here. Chopper body will take over.
+                delete_object(true);
+            }
+
+            public override void _update60()
+            {
+                lifetime++;
+                base._update60();
+            }
+
+            public override void _draw()
+            {
+                int time_step = 10;
+                if (lifetime < time_step)
+                {
+                    inst.apply_pal(inst.fade_table[2]);
+                }
+                else if (lifetime < time_step * 2)
+                {
+                    inst.apply_pal(inst.fade_table[1]);
+                }
+                else if (lifetime < time_step * 3)
+                {
+                    inst.apply_pal(inst.fade_table[0]);
+                }
+                base._draw();
+                pal();
             }
         }
 
@@ -5421,6 +5508,61 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             inst = this;
         }
 
+        private bool ParseTmxObjectToBadGuy(TmxObject o)
+        {
+            badguy b = null;
+
+            if (string.Compare(o.Type, "spawn_chopper", true) == 0)
+            {
+                b = new chopper(Int32.Parse(o.Properties["duration"]), Int32.Parse(o.Properties["dist"]))
+                {
+                    x = (float)o.X + ((float)o.Width * 0.5f),
+                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                };
+            }
+            else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
+            {
+                b = new lava_blaster(Int32.Parse(o.Properties["dir"]))
+                {
+                    x = (float)o.X + ((float)o.Width * 0.5f),
+                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                };
+            }
+            else if (string.Compare(o.Type, "spawn_rolley", true) == 0)
+            {
+                b = new badguy(Int32.Parse(o.Properties["dir"]))
+                {
+                    x = (float)o.X + ((float)o.Width * 0.5f),
+                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                };
+            }
+
+            if (b != null)
+            {
+                string respawn_string;
+                if (o.Properties.TryGetValue("respawn", out respawn_string))
+                {
+                    if (bool.Parse(respawn_string) == true)
+                    {
+                        b.respawn_data = o;
+                    }
+                }
+                string respawn_delay_string;
+                if (o.Properties.TryGetValue("respawn_delay", out respawn_delay_string))
+                {
+                    b.respawn_delay = int.Parse(respawn_delay_string);
+                }
+                b.x_initial = b.x;
+                b.y_initial = b.y;
+                objs_add_queue.Add(b);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public void initialize_map(ref Vector2 spawn_point, bool debug_hot_reload)
         {
             current_map = queued_map;
@@ -5589,40 +5731,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         //game_cam.jump_to_target();
                         game_cam_man.cameras.Add(new_cam);
                     }
-                    else if (string.Compare(o.Type, "spawn_chopper", true) == 0)
+                    else if (ParseTmxObjectToBadGuy(o))
                     {
-                        objs_add_queue.Add(
-                                new chopper(Int32.Parse(o.Properties["duration"]), Int32.Parse(o.Properties["dist"]))
-                                {
-                                    x = (float)o.X + ((float)o.Width * 0.5f),
-                                    y = (float)o.Y + ((float)o.Height * 0.5f),
-                                }
-                            );
-                    }
-                    else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
-                    {
-                        objs_add_queue.Add(
-                                new lava_blaster(Int32.Parse(o.Properties["dir"]))
-                                {
-                                    x = (float)o.X + ((float)o.Width * 0.5f),
-                                    y = (float)o.Y + ((float)o.Height * 0.5f),
-                                }
-                            );
+                        // noop
                     }
                     else if (string.Compare(o.Type, "spawn_steam_spawner", true) == 0)
                     {
                         objs_add_queue.Add(
                                 new steam_spawner()
-                                {
-                                    x = (float)o.X + ((float)o.Width * 0.5f),
-                                    y = (float)o.Y + ((float)o.Height * 0.5f),
-                                }
-                            );
-                    }
-                    else if (string.Compare(o.Type, "spawn_rolley", true) == 0)
-                    {
-                        objs_add_queue.Add(
-                                new badguy(Int32.Parse(o.Properties["dir"]))
                                 {
                                     x = (float)o.X + ((float)o.Width * 0.5f),
                                     y = (float)o.Y + ((float)o.Height * 0.5f),
@@ -6309,6 +6425,32 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public map_config cur_map_config = new map_config();
 
+        public class timer_callback : PicoXObj
+        {
+            int delay;
+            Action callback;
+
+            public timer_callback(int delay, Action callback)
+            {
+                this.delay = delay;
+                this.callback = callback;
+
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                delay--;
+
+                if (delay <= 0)
+                {
+                    callback();
+                    inst.objs_remove_queue.Add(this);
+                }
+            }
+        }
+
         // A global scene used for displaying all ui_widgets. This an empty root.
         ui_widget ui_scene;
 
@@ -6580,6 +6722,27 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 message.open_this_frame = false;
             }
 
+            // flip before iterating backwards. This is slight wrong, since hidden items will get flipped
+            // multiple times.
+            // NOTE: This comes BEFORE objects get updated to avoid case where an object is
+            //       added to objs list, but isn't updated, and then gets drawn with garbage
+            //       data.
+            objs_add_queue.Reverse();
+            for (int i = objs_add_queue.Count - 1; i >= 0; i--)
+            {
+                sprite s = objs_add_queue[i] as sprite;
+
+                if (s != null)
+                {
+                    if (inst.is_packed_tile(fget(mget_tiledata(flr(s.x / 8.0f), flr(s.y / 8.0f))), packed_tile_types.rock_smash))
+                    {
+                        continue;
+                    }
+                }
+                objs.Add(objs_add_queue[i]);
+                objs_add_queue.RemoveAt(i);
+            }
+
             // TODO: Should we ignore objects in the remove queue?
             for (int i = 0; i < objs.Count; i++)
             {
@@ -6600,22 +6763,22 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             // flip before iterating backwards. This is slight wrong, since hidden items will get flipped
             // multiple times.
-            objs_add_queue.Reverse();
+            //objs_add_queue.Reverse();
 
-            for (int i = objs_add_queue.Count - 1; i >= 0; i--)
-            {
-                sprite s = objs_add_queue[i] as sprite;
+            //for (int i = objs_add_queue.Count - 1; i >= 0; i--)
+            //{
+            //    sprite s = objs_add_queue[i] as sprite;
 
-                if (s != null)
-                {
-                    if (inst.is_packed_tile(fget(mget_tiledata(flr(s.x / 8.0f), flr(s.y / 8.0f))), packed_tile_types.rock_smash))
-                    {
-                        continue;
-                    }
-                }
-                objs.Add(objs_add_queue[i]);
-                objs_add_queue.RemoveAt(i);
-            }
+            //    if (s != null)
+            //    {
+            //        if (inst.is_packed_tile(fget(mget_tiledata(flr(s.x / 8.0f), flr(s.y / 8.0f))), packed_tile_types.rock_smash))
+            //        {
+            //            continue;
+            //        }
+            //    }
+            //    objs.Add(objs_add_queue[i]);
+            //    objs_add_queue.RemoveAt(i);
+            //}
 
             //objs.AddRange(objs_add_queue);
             //objs_add_queue.Clear();
