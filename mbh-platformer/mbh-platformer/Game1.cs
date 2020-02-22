@@ -623,6 +623,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     // sides
                 }
             }
+
+            public virtual void on_collide_side(sprite target) { }
         }
 
         public class simple_fx : sprite
@@ -1258,7 +1260,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
             }
 
-            protected virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
+            public virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
             {
                 hp = max(0, hp - 1);
 
@@ -2144,6 +2146,141 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class physical_object : sprite
+        {
+            protected float gravity = 0; // none
+            protected float ground_friction = 1.0f; // none
+            protected float bounce_friction = 1.0f; // none
+
+            public physical_object() : base()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(832, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                w = 16;
+                h = 16;
+                cw = 16;
+                ch = 16;
+
+                is_platform = true;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                // Store the original position so that we can calculate a delta at the end of the update,
+                // and move objects on top of this one at the same rate.
+                var old_x = x;
+                var old_y = y;
+
+                x += dx;
+
+                dy += gravity;
+                y += dy;
+
+                grounded = 0;
+                Vector2 hit_point;
+                if (inst.collide_floor(this, out hit_point))
+                {
+                    dx *= ground_friction;
+                }
+
+                var old_dx = dx;
+                if (inst.collide_side(this, out hit_point))
+                {
+                    dx = -old_dx * bounce_friction;
+                }
+                inst.collide_roof(this);
+
+                // After moving this object, not try to move the player.
+                //
+
+                // TODO: Error - This assumes a collision means you are standing on top!
+                bool touching_player = inst.intersects_box_box(inst.pc.pawn.cx, inst.pc.pawn.cy + inst.pc.pawn.ch * 0.5f, inst.pc.pawn.cw * 0.5f, 1, cx, cy, cw * 0.5f, (ch + 2) * 0.5f);
+
+                if (touching_player)
+                {
+                    inst.pc.pawn.x += x - old_x;
+                    inst.pc.pawn.y += y - old_y;
+                }
+            }
+        }
+
+        public class push_block : physical_object
+        {
+            public push_block() : base()
+            {
+                gravity = 0.18f; // 0.3f;
+                ground_friction = 0.98f;
+                bounce_friction = 0.5f;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                float min_speed = 0.05f;
+                if (abs(dx) <= min_speed)
+                {
+                    dx = 0;
+                }
+
+                if (abs(dx) > 0)
+                {
+                    foreach (var o in inst.objs)
+                    {
+                        badguy bg = o as badguy;
+                        if (bg != null)
+                        {
+                            if (inst.intersects_obj_obj(this, bg))
+                            {
+                                bg.on_bounce(this);
+                            }
+                        }
+                    }
+                }
+
+                if (grounded != 0 && abs(dx) > 0)
+                {
+                    inst.objs_add_queue.Add(new simple_fx_dust() { x = cx + rnd(8) - 4, y = cy + ch * 0.5f });
+                }
+            }
+
+            public override void on_collide_side(sprite target)
+            {
+                base.on_collide_side(target);
+
+                player_pawn p = target as player_pawn;
+                physical_object po = target as physical_object;
+
+                if (p != null && p.get_is_dashing())
+                {
+                    dx = p.max_dx * Math.Sign(cx - p.cx) * 3.0f;
+                }
+                else if (po != null)
+                {
+                    // target is the thing running into us.
+                    dx = po.dx * bounce_friction;
+                }
+            }
+
+        }
+
         public class repeating_sprite : sprite
         {
             public repeating_sprite(float x, float y, int width_tiles, int height_tiles, int starting_sprite_id, int bank, int num_frames, int ticks_per_frame)
@@ -2297,6 +2434,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 // TODO: Error - This assumes a collision means you are standing on top!
                 var touching_player = inst.intersects_box_box(inst.pc.pawn.cx, inst.pc.pawn.cy + inst.pc.pawn.ch * 0.5f, inst.pc.pawn.cw * 0.5f, 1, self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
+                var touching_player_head = inst.intersects_box_box(
+                    inst.pc.pawn.cx, inst.pc.pawn.cy - inst.pc.pawn.ch * 0.5f, 
+                    inst.pc.pawn.cw * 0.5f, 1, 
+                    self.cx, self.cy, self.cw * 0.5f, (self.ch + 2) * 0.5f);
                 //var touching_player = inst.intersects_obj_obj(self, inst.p.pawn);
 
                 var old_x = self.x;
@@ -2359,15 +2500,37 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     tick_y += 1;
                 }
 
-                if (touching_player)
+                if (inst.cur_game_state != game_state.gameplay_dead)
                 {
-                    hit_this_frame = true;
-                    inst.pc.pawn.x += self.x - old_x;
-                    inst.pc.pawn.y += self.y - old_y;
-                }
-                else
-                {
-                    inst.pc.pawn.platformed = false;
+                    if (touching_player)
+                    {
+                        hit_this_frame = true;
+                        inst.pc.pawn.x += self.x - old_x;
+                        inst.pc.pawn.y += self.y - old_y;
+
+                        // If the player is stand on the platform, and it's moving up, check if they are
+                        // hitting a roof, and if so MURDER THEM!!!
+                        if (end_y < start_y) // moving up
+                        {
+                            if (inst.collide_roof(inst.pc.pawn))
+                            {
+                                inst.pc.pawn.adjust_hp(-9999);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Similar to above, if the platform is moving down and it pushes the player
+                        // into the floor, MURDER THEM!!!!!!!!
+                        if (end_y > start_y && touching_player_head) // moving down
+                        {
+                            if (inst.collide_floor(inst.pc.pawn))
+                            {
+                                inst.pc.pawn.adjust_hp(-9999);
+                            }
+                        }
+                        inst.pc.pawn.platformed = false;
+                    }
                 }
             }
         }
@@ -3195,6 +3358,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public override void start_dash_bounce(ref Vector2 hit_point)
             {
+                // Don't allow dash bounce when sliding under.
+                // This is more properly handled prior to call start_dash_bounce in
+                // some cases, but this handles stuff like the case so dashing through
+                // a flying enemy.
+                if (is_sliding_under())
+                {
+                    return;
+                }
                 // Clear out the dash direction since we hit a surface of something.
                 dash_dir = Vector2.Zero;
 
@@ -3266,7 +3437,20 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             private bool is_sliding_under()
             {
-                return grounded != 0 && mfget(flr(cx / 8), flr(cy / 8) - 2, 0) && dash_time > 0;
+                bool hit_box = false;
+                foreach(var o in inst.objs)
+                {
+                    physical_object p = o as physical_object;
+                    if (p != null)
+                    {
+                        if (inst.intersects_obj_box(p, cx, cy - 16, cw * 0.5f, ch * 0.5f))
+                        {
+                            hit_box = true;
+                            break;
+                        }
+                    }
+                }
+                return grounded != 0 && (mfget(flr(cx / 8), flr(cy / 8) - 2, 0) || hit_box) && dash_time > 0;
             }
 
             //call once per tick.
@@ -3495,13 +3679,23 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
 
                 //hit walls
+                float old_dx = dx;
                 Vector2 hit_point = new Vector2();
                 if (!controller.DEBUG_fly_enabled && inst.collide_side(self, out hit_point))
                 {
                     if (is_dashing && dash_dir.X != 0)
                     {
-                        start_dash_bounce(ref hit_point);
-                        is_dashing = false;
+                        if (!is_sliding_under())
+                        {
+                            start_dash_bounce(ref hit_point);
+                            is_dashing = false;
+                        }
+                        else
+                        {
+                            dash_dir.X *= -1; // dx = -1 * old_dx;
+                            dx = -1 * old_dx;
+                            flipx = !flipx;
+                        }
                     }
 
                 }
@@ -3992,7 +4186,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                                     inst.apply_pal(inst.bright_table[3]);
                                     x = old_x + i;
                                     y = old_y + j;
+                                    bool old = inst.debug_draw_enabled;
+                                    inst.debug_draw_enabled = false;
                                     base._draw();
+                                    inst.debug_draw_enabled = old;
                                 }
                             }
                         }
@@ -4369,10 +4566,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             foreach (PicoXObj o in objs)
             {
                 sprite v = o as sprite;
-                if (v != null)
+                if (v != null && v != self)
                 {
-                    // Only player for now.
-                    if (self == pc.pawn && v.is_platform)
+                    if (v.is_platform)
                     {
                         // Left objects.
 
@@ -4380,6 +4576,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         //if (intersects_obj_box(self, v.x, v.y, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                         if (intersects_box_box(self.cx - self.cw * 0.5f, self.cy, 0.5f, self.ch / 3.0f, v.cx, v.cy, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                         {
+                            // Call before dx is 0
+                            v.on_collide_side(self);
+
                             self.dx = 0;
                             //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
                             // +1 is to fix a bug where the player seems to get sucked into the side of platforms
@@ -4398,11 +4597,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                         if (intersects_box_box(self.cx + self.cw * 0.5f, self.cy, 0.5f, self.ch / 3.0f, v.cx, v.cy, v.cw * 0.5f, (v.ch - 4) * 0.5f))
                         {
+                            // Call before dx is 0
+                            v.on_collide_side(self);
+
                             self.dx = 0;
                             self.x = (/*flr*/(v.cx - v.cw * 0.5f)) - (self.cw * 0.5f) - self.cx_offset - 1.0f;
 
                             // We don't really know the hit point, so just put it at the center on the edge that hit.
-                            hit_point.X = self.cx + (offset_x);
+                            hit_point.X = self.cx - (offset_x);
                             hit_point.Y = self.cy;
 
                             //return true;
@@ -4420,6 +4622,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         //check if pushing into floor tile and resolve.
         //requires self.dx,self.x,self.y,self.grounded,self.airtime and 
         //assumes tile flag 0 or 1 == solid
+        bool collide_floor(sprite self)
+        {
+            Vector2 temp;
+            return collide_floor(self, out temp);
+        }
         bool collide_floor(sprite self, out Vector2 hit_point)
         {
             //didn't hit anything solid.
@@ -4470,9 +4677,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 foreach (PicoXObj o in objs)
                 {
                     sprite v = o as sprite;
-                    if (v != null)
+                    if (v != null && v != self)
                     {
-                        if (self == pc.pawn && v.is_platform)
+                        // TODO: Should all objects calling this function be checking against other solid objects?
+                        //       Does it still make sense that this is player only?
+                        // TODO: Badguy has a "solid" flag which is uses to see if it should call the collision
+                        //       functions at all. Perhaps that should be moved to sprite, and checked here, instead
+                        //       of is_platform?
+                        if ((self == pc.pawn || self.is_platform) && v.is_platform)
                         {
                             // Check a 1 pixel high box along the bottom the the player.
                             // Adding 2 to the solid because that is what solids do in their update to stick to
@@ -4519,7 +4731,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         //assumes tile flag 0 == solid
         bool collide_roof(sprite self)
         {
-            if (self.dy > 0)
+            if (self.dy >= 0)
             {
                 return false;
             }
@@ -4548,9 +4760,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 foreach (PicoXObj o in objs)
                 {
                     sprite v = o as sprite;
-                    if (v != null)
+                    if (v != null && v != self)
                     {
-                        if (self == pc.pawn && v.is_platform)
+                        if ((self == pc.pawn || self.is_platform) && v.is_platform)
                         {
                             // Check a 1 pixel box along the bottom of the player.
                             // Using 0.5f because that seems more correct but im not totally sure.
@@ -5859,6 +6071,15 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             one_way = bool.Parse(one_way_string),
                         };
                         objs_add_queue.Add(p);
+                    }
+                    else if (string.Compare(o.Type, "spawn_push_block", true) == 0)
+                    {
+                        push_block block = new push_block()
+                        {
+                            x = (float)o.X + ((float)o.Width * 0.5f),
+                            y = (float)o.Y + ((float)o.Height * 0.5f)
+                        };
+                        objs_add_queue.Add(block);
                     }
                     else if (string.Compare(o.Type, "map_link", true) == 0)
                     {
