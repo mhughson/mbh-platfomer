@@ -1469,9 +1469,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             ticks=10,//how long is each frame shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(368, 3, 2),
-                                create_anim_frame(371, 3, 2),
-                                create_anim_frame(374, 3, 2),
+                                create_anim_frame(768, 3, 2),
+                                create_anim_frame(771, 3, 2),
+                                create_anim_frame(774, 3, 2),
                             }
                         }
                     },
@@ -1546,9 +1546,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             ticks=10,//how long is each frame shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(368, 2, 2),
-                                create_anim_frame(371, 2, 2),
-                                create_anim_frame(374, 2, 2),
+                                create_anim_frame(768, 2, 2),
+                                create_anim_frame(771, 2, 2),
+                                create_anim_frame(774, 2, 2),
                             }
                         }
                     },
@@ -1593,9 +1593,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             ticks=10,//how long is each frame shown.
                             frames = new int[][]
                             {
-                                create_anim_frame(368, 2, 2),
-                                create_anim_frame(371, 2, 2),
-                                create_anim_frame(374, 2, 2),
+                                create_anim_frame(768, 2, 2),
+                                create_anim_frame(771, 2, 2),
+                                create_anim_frame(774, 2, 2),
                             }
                         }
                     },
@@ -3992,7 +3992,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     if (grounded != 0)
                     {
-                        next_anim = ("dash");
+                        if (is_sliding_under())
+                        {
+                            next_anim = ("dash");
+                        }
+                        else
+                        {
+                            next_anim = "dash_air";
+                        }
                     }
                     else
                     {
