@@ -382,6 +382,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public virtual int get_hp_max() { return 1; }
             public float hp = 1;
             public float attack_power = 1;
+            public bool touch_damage = false;
 
             protected int invul_time = 0;
             protected int invul_time_on_hit = 120;
@@ -928,9 +929,63 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
+        public class fx_explosion : simple_fx
+        {
+            public fx_explosion() : base()
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks = 2,//how long is each frame shown.
+                            //frames= new int[][] { new int[] { 0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35 } },//what frames are shown.
+                            frames = new int[][]
+                            {
+                                //create_anim_frame(864, 2, 4),
+                                //create_anim_frame(866, 2, 4),
+                                //create_anim_frame(868, 2, 4),
+                                //create_anim_frame(870, 2, 4),
+                                //create_anim_frame(928, 2, 4),
+                                //create_anim_frame(930, 2, 4),
+                                //create_anim_frame(932, 2, 4),
+                                //create_anim_frame(934, 2, 4),
+
+                                create_anim_frame(994, 1, 2),
+                                create_anim_frame(995, 1, 2),
+                                create_anim_frame(996, 1, 2),
+                                create_anim_frame(997, 1, 2),
+                                create_anim_frame(998, 1, 2),
+                                create_anim_frame(999, 1, 2),
+                                create_anim_frame(1000, 1, 2),
+                                create_anim_frame(1001, 1, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                //w = 16;
+                //h = 32;
+
+                w = 8;
+                h = 16;
+
+                dx = 0;
+                dy = 0;
+
+                bank = 5;
+            }
+        }
+
         public class badguy : sprite
         {
-            int local_ticks = 0;
+            protected int local_ticks = 0;
+
+            protected int ticks_since_damage = 9999;
 
             float max_dx = 9999;
             float max_dy = 9999;
@@ -942,8 +997,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             bool bounced = false;
 
             public int dead_time = -1;
-
-            public bool touch_damage = false;
 
             bool cleared_attacker = false;
 
@@ -1016,6 +1069,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
 
                 local_ticks += 1;
+                ticks_since_damage++;
 
                 //limit walk speed
 
@@ -1252,16 +1306,25 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public override void _draw()
             {
+                if (ticks_since_damage < 5)
+                {
+                    inst.apply_pal(inst.bright_table[3]);
+                }
+
                 base._draw();
 
                 if (has_rock_armor)
                 {
                     spr(840, x - 8, y - 8, 2, 2);
                 }
+
+                pal();
             }
 
             public virtual void on_bounce(sprite attacker, bool ignore_dead_time = false)
             {
+                ticks_since_damage = 0;
+
                 hp = max(0, hp - 1);
 
                 if ((dead_time == -1 || ignore_dead_time) && hp == 0)
@@ -1306,6 +1369,157 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     amount = -1.0f;
                 }
                 inst.pc.pawn.dy = inst.pc.pawn.max_dy * amount;
+            }
+        }
+
+        public class boss_block_tosser : badguy
+        {
+            int max_hp = 10;
+            block_gun gun;
+
+            public boss_block_tosser() : base(-1)
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=5,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(618, 6, 30),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                hp = max_hp;
+                bank = 5;
+                grav = 0;
+
+                solid = false;
+                dx = 0;
+                dy = 0;
+
+                flipx = false;
+                flipy = false;
+
+                touch_damage = true;
+            }
+
+            public override void _init()
+            {
+                base._init();
+
+                block_gun b = new block_gun(-1, 0)
+                {
+                    x = x,
+                    y = y,
+                    w = 16,
+                    h = 16,
+                    firing_delay = 240,
+                };
+                inst.objs_add_queue.Add(b);
+
+                gun = b;
+                gun.cur_mode = block_gun.firing_mode.one_at_a_time;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                foreach(PicoXObj o in inst.objs)
+                {
+                    boss_push_block b = o as boss_push_block;
+                    if (b != null)
+                    {
+                        if (b.is_block_launched)
+                        {
+                            if (inst.intersects_obj_obj(this, b))
+                            {
+                                printh("HIT!");
+                                inst.objs_remove_queue.Add(b);
+                                hp = max(0, hp - 1);
+                                ticks_since_damage = 0;
+                                inst.hit_pause.start_pause(hit_pause_manager.pause_reason.hit_boss);
+                            }
+                        }
+                    }
+                }
+
+                if (hp <= 0)
+                {
+                    gun.cur_mode = block_gun.firing_mode.paused;
+                    x = x_initial + sin(local_ticks * 0.1f) * 2 + 2;
+
+                    //if (local_ticks % 5 == 0)
+                    {
+
+                        int nx = flr(rnd(cw) + (x - cw * 0.5f));
+                        int ny = flr(rnd(ch) + (y - ch * 0.5f));
+                        fx_explosion explosion = new fx_explosion()
+                        {
+                            x = nx,
+                            y = ny,
+                        };
+                        inst.objs_add_queue.Add(explosion);
+                    }
+
+                    y += ticks_since_damage * 0.005f;
+                }
+                else if (hp <= 5)
+                {
+                    gun.cur_mode = block_gun.firing_mode.burst_with_spikes;
+                }
+                else
+                {
+                    gun.cur_mode = block_gun.firing_mode.one_at_a_time;
+                }
+            }
+
+            public override void on_bounce(sprite attacker, bool ignore_dead_time = false)
+            {
+                // do nothing.
+            }
+
+            public override void _draw()
+            {
+                if (hp < max_hp * 0.1f)
+                {
+                    if (local_ticks % 10 < 5)
+                    {
+                        inst.apply_pal(inst.bright_table[1]);
+                    }
+                }
+                else if (hp < max_hp * 0.25f)
+                {
+                    if (local_ticks % 60 < 30)
+                    {
+                        inst.apply_pal(inst.bright_table[1]);
+                    }
+                }
+                else if (hp < max_hp * 0.5f)
+                {
+                    if (local_ticks % 120 < 60)
+                    {
+                        inst.apply_pal(inst.bright_table[1]);
+                    }
+                }
+                //else if (hp < max_hp * 0.75f)
+                //{
+                //    inst.apply_pal(inst.bright_table[1]);
+                //}
+                base._draw();
+                pal();
+
+                if (inst.debug_draw_enabled)
+                {
+                    inst.printo("hp:" + hp, x, y, 7, 0);
+                }
             }
         }
 
@@ -1753,8 +1967,6 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
         }
 
-
-
         public class dart_gun : sprite
         {
             int ticks = 0;
@@ -1768,8 +1980,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             // Has the start_delay expired.
             bool started = false;
 
-            float dir_x;
-            float dir_y;
+            protected float dir_x;
+            protected float dir_y;
             int bullet_life_time = 480; // enough to leave the screen
 
             public dart_gun(float dir_x, float dir_y) : base()
@@ -1874,7 +2086,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
             }
 
-            void fire_shot()
+            protected virtual void fire_shot()
             {
                 projectile p = new projectile(dir_x, dir_y, bullet_life_time)
                 {
@@ -1882,6 +2094,120 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     y = y + dir_y * 8.0f,
                 };
                 inst.objs_add_queue.Add(p);
+            }
+        }
+        
+        public class block_gun : dart_gun
+        {
+            public enum firing_mode
+            {
+                one_at_a_time,
+                burst_with_spikes,
+                paused,
+                crazy,
+            };
+
+            public firing_mode cur_mode;
+
+            public block_gun(float dir_x, float dir_y) : base(dir_x, dir_y)
+            {
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "idle",
+                        new anim()
+                        {
+                            loop = false,
+                            ticks= 1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                new int[] { 0, 0, 0, 0 },
+                            }
+                        }
+                    },
+                };
+
+                set_anim("idle");
+                bank = 0;
+
+                cur_mode = firing_mode.one_at_a_time;
+            }
+
+            protected override void fire_shot()
+            {
+                // override base implementation
+                //base.fire_shot();
+                
+                int good_one;
+                int num_blocks;
+
+                switch (cur_mode)
+                {
+                    default:
+                    case firing_mode.paused:
+                        {
+                            good_one = 0;
+                            num_blocks = 0;
+                            break;
+                        }
+                    case firing_mode.one_at_a_time:
+                        {
+                            num_blocks = 1;
+                            good_one = 0;
+                            break;
+                        }
+                    case firing_mode.burst_with_spikes:
+                        {
+                            num_blocks = 3;
+                            good_one = flr(rnd(2.99f));
+                            break;
+                        }
+                    case firing_mode.crazy:
+                        {
+                            num_blocks = 8;
+                            good_one = -1;
+                            break;
+                        }
+                }
+
+                Action callback = new Action(() =>
+                {
+                    boss_kill_block p = new boss_kill_block()
+                    {
+                        x = x + dir_x * 8.0f,
+                        y = y + dir_y * 8.0f,
+                    };
+                    p.dx = dir_x * (rnd(1.0f) + 2.0f);
+                    p.dy = -1.0f * (rnd(3.0f) + 2.5f);
+                    inst.objs_add_queue.Add(p);
+                });
+
+
+                Action callback_good = new Action(() =>
+                {
+                    boss_push_block p = new boss_push_block()
+                    {
+                        x = x + dir_x * 8.0f,
+                        y = y + dir_y * 8.0f,
+                    };
+                    p.dx = dir_x * (rnd(2.0f) + 1.0f);
+                    p.dy = -1.0f * (rnd(3.0f) + 2.5f);
+                    inst.objs_add_queue.Add(p);
+                });
+
+                for (int i = 0; i < num_blocks; i++)
+                {
+                    if (i == good_one || good_one == -1)
+                    {
+                        timer_callback t = new timer_callback(30 * i, callback_good);
+                        inst.objs_add_queue.Add(t);
+                    }
+                    else
+                    {
+                        timer_callback t = new timer_callback(30 * i, callback);
+                        inst.objs_add_queue.Add(t);
+                    }
+                }
             }
         }
 
@@ -2183,6 +2509,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 base._update60();
 
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
                 // Store the original position so that we can calculate a delta at the end of the update,
                 // and move objects on top of this one at the same rate.
                 var old_x = x;
@@ -2200,9 +2531,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     dx *= ground_friction;
                 }
 
+                sprite hit_sprite;
                 var old_dx = dx;
-                if (inst.collide_side(this, out hit_point))
+                if (inst.collide_side(this, out hit_point, out hit_sprite))
                 {
+                    on_collide_side(null);
                     dx = -old_dx * bounce_friction;
                 }
                 inst.collide_roof(this);
@@ -2223,6 +2556,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
         public class push_block : physical_object
         {
+            protected bool launcher = false;
+            public bool is_block_launched = false;
+
             public push_block() : base()
             {
                 gravity = 0.18f; // 0.3f;
@@ -2233,6 +2569,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public override void _update60()
             {
                 base._update60();
+
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
 
                 float min_speed = 0.05f;
                 if (abs(dx) <= min_speed)
@@ -2258,6 +2599,23 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 if (grounded != 0 && abs(dx) > 0)
                 {
                     inst.objs_add_queue.Add(new simple_fx_dust() { x = cx + rnd(8) - 4, y = cy + ch * 0.5f });
+                    gravity = 0.18f;
+                    is_block_launched = false;
+                }
+
+                if (inst.cur_game_state != game_state.gameplay_dead)
+                {
+                    inst.collide_side(inst.pc.pawn);
+                    var touching_player_head = inst.intersects_box_box(
+                        inst.pc.pawn.cx, inst.pc.pawn.cy - inst.pc.pawn.ch * 0.5f,
+                        inst.pc.pawn.cw * 0.5f, 1,
+                        cx, cy, cw * 0.5f, (ch + 2) * 0.5f);
+
+                    // Bounce blocks of the player's head.
+                    if (dy > 0 && touching_player_head && touch_damage == false) // moving down 
+                    {
+                        dy *= -0.5f;
+                    }
                 }
             }
 
@@ -2270,7 +2628,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (p != null && p.get_is_dashing())
                 {
-                    dx = p.max_dx * Math.Sign(cx - p.cx) * 3.0f;
+                    dx = p.max_dx * Math.Sign(p.dx) * 3.0f; ; // Math.Sign(cx - p.cx) * 3.0f;
+
+                    if (launcher)
+                    {
+                        gravity = 0;
+                        dy = 0;
+                        is_block_launched = true;
+                    }
                 }
                 else if (po != null)
                 {
@@ -2279,6 +2644,100 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
             }
 
+        }
+
+        public class boss_push_block : push_block
+        {
+            int lifespan;
+
+            public boss_push_block() : base()
+            {
+                gravity = 0.18f * 0.5f; // 0.3f;
+                ground_friction = 0.96f;
+                bounce_friction = 0.5f;
+                launcher = true;
+                lifespan = 240;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.hit_pause.is_paused())
+                {
+                    return;
+                }
+
+                //if (fget(mget_tiledata(flr(x / 8.0f), flr(y / 8.0f)), 0))
+                lifespan--;
+                if (lifespan <= 0)
+                {
+                    inst.objs_remove_queue.Add(this);
+                    inst.objs_add_queue.Add(new simple_fx_projectile_death() { x = x, y = y });
+                    return;
+                }
+            }
+
+            public override void on_collide_side(sprite target)
+            {
+                base.on_collide_side(target);
+
+                if (target as player_pawn == null)
+                {
+                    gravity = 0.18f * 0.5f; // 0.3f;
+                    is_block_launched = false;
+                    //inst.objs_remove_queue.Add(this);
+                    //inst.objs_add_queue.Add(new simple_fx_projectile_death() { x = x, y = y });
+                }
+            }
+        }
+
+        public class boss_kill_block : boss_push_block
+        {
+            public boss_kill_block() : base()
+            {
+                is_platform = false;
+                attack_power = float.MaxValue;
+                launcher = false;
+                touch_damage = true;
+
+                anims = new Dictionary<string, anim>()
+                {
+                    {
+                        "default",
+                        new anim()
+                        {
+                            ticks=1,//how long is each frame shown.
+                            frames = new int[][]
+                            {
+                                create_anim_frame(992, 2, 2),
+                            }
+                        }
+                    },
+                };
+
+                set_anim("default");
+
+                cw = 8;
+                ch = 8;
+
+                bank = 5;
+            }
+
+            public override void _update60()
+            {
+                base._update60();
+
+                if (inst.intersects_obj_obj(inst.pc.pawn, this))
+                {
+                    inst.pc.pawn.on_take_hit(this);
+                }
+            }
+
+            public override void _draw()
+            {
+                base._draw();
+            }
         }
 
         public class repeating_sprite : sprite
@@ -4509,7 +4968,19 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         //check if pushing into side tile and resolve.
         //requires self.dx,self.x,self.y, and 
         //assumes tile flag 0 == solid
+        bool collide_side(sprite self)
+        {
+            sprite temp;
+            Vector2 temp2;
+            return collide_side(self, out temp2, out temp);
+        }
         bool collide_side(sprite self, out Vector2 hit_point)
+        {
+            sprite temp;
+            return collide_side(self, out hit_point, out temp);
+        }
+
+        bool collide_side(sprite self, out Vector2 hit_point, out sprite hit_sprite)
         {
             // Don't do collision of the player isn't moving sideways.
             //if (self.dx == 0)
@@ -4522,6 +4993,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             //didn't hit anything solid.
             hit_point.X = 0;
             hit_point.Y = 0;
+            hit_sprite = null;
 
             //check for collision along inner-2-3rds
             //of sprite side.
@@ -4585,6 +5057,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         {
                             // Call before dx is 0
                             v.on_collide_side(self);
+                            hit_sprite = v;
 
                             self.dx = 0;
                             //self.x = (/*flr*/(v.x - (v.cw * dir) * 0.5f)) - ((self.cw * dir) * 0.5f);
@@ -4606,6 +5079,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                         {
                             // Call before dx is 0
                             v.on_collide_side(self);
+                            hit_sprite = v;
 
                             self.dx = 0;
                             self.x = (/*flr*/(v.cx - v.cw * 0.5f)) - (self.cw * 0.5f) - self.cx_offset - 1.0f;
@@ -4740,7 +5214,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
         {
             if (self.dy >= 0)
             {
-                return false;
+                //return false;
             }
 
             //check for collision at multiple points along the top
@@ -4802,6 +5276,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 death,
                 artifact_picked_up,
                 gem_picked_up,
+                hit_boss,
 
                 message_box_open,
                 level_trans,
@@ -4815,6 +5290,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 { pause_reason.gem_picked_up, 0 },
                 { pause_reason.message_box_open, 1 },
                 { pause_reason.level_trans, 1 },
+                { pause_reason.hit_boss, 5 },
             };
 
             public int pause_time_remaining { get; protected set; }
@@ -5755,6 +6231,18 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     y = (float)o.Y + ((float)o.Height * 0.5f),
                 };
             }
+            else if (string.Compare(o.Type, "spawn_boss_block_tosser", true) == 0)
+            {
+                b = new boss_block_tosser()
+                {
+                    x = (float)o.X + ((float)o.Width * 0.5f),
+                    y = (float)o.Y + ((float)o.Height * 0.5f),
+                    w = (int)o.Width,
+                    h = (int)o.Height,
+                    cw = (int)o.Width,
+                    ch = (int)o.Height,
+                };
+            }
 
             if (b != null)
             {
@@ -5845,6 +6333,12 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 foreach (var o in group.Objects)
                 {
+                    // treat visibile as "enabled"
+                    if (o.Visible == false)
+                    {
+                        continue;
+                    }
+
                     if (string.Compare(o.Type, "spawn_point", true) == 0 && !debug_hot_reload)
                     {
                         if (!string.IsNullOrEmpty(active_map_link?.dest_spawn_name))
@@ -5964,7 +6458,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                                 }
                             );
                     }
-                    else if (string.Compare(o.Type, "spawn_dart_gun", true) == 0)
+                    else if (string.Compare(o.Type, "spawn_dart_gun", true) == 0 || string.Compare(o.Type, "spawn_block_gun", true) == 0)
                     {
                         string start_delay_string = "0";
                         int start_delay = 0;
@@ -5982,12 +6476,25 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             start_delay *= int.Parse(start_delay_index_string);
                         }
 
-                        dart_gun d = new dart_gun(float.Parse(o.Properties["dir_x"]), float.Parse(o.Properties["dir_y"]))
+                        dart_gun d = null;
+                        if (string.Compare(o.Type, "spawn_block_gun", true) == 0)
                         {
-                            x = (float)o.X + ((float)o.Width * 0.5f),
-                            y = (float)o.Y + ((float)o.Height * 0.5f),
-                            start_delay = start_delay,
-                        };
+                            d = new block_gun(float.Parse(o.Properties["dir_x"]), float.Parse(o.Properties["dir_y"]))
+                            {
+                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                start_delay = start_delay,
+                            };
+                        }
+                        else
+                        {
+                            d = new dart_gun(float.Parse(o.Properties["dir_x"]), float.Parse(o.Properties["dir_y"]))
+                            {
+                                x = (float)o.X + ((float)o.Width * 0.5f),
+                                y = (float)o.Y + ((float)o.Height * 0.5f),
+                                start_delay = start_delay,
+                            };
+                        }
 
                         // Only set these if the property exists, so that it can fallback to class defaults.
                         string firing_delay_string = "0";
@@ -6969,6 +7476,10 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
                 objs.Add(objs_add_queue[i]);
                 objs_add_queue.RemoveAt(i);
+                if (s != null)
+                {
+                    s._init();
+                }
             }
 
             // TODO: Should we ignore objects in the remove queue?
@@ -7605,9 +8116,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     btnstr += " ";
                 }
 
-                print(btnstr, 0, Res.Y - 5, 0);
+                printo(btnstr, 1, Res.Y - 6, 7, 0);
 
-                print(objs.Count.ToString(), btnstr.Length * 4, Res.Y - 5, 1);
+                printo(objs.Count.ToString(), btnstr.Length * 4, Res.Y - 6, 7, 0);
 
                 int ypos = 18;
                 int yinc = 8;
