@@ -1140,6 +1140,18 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                     inst.collide_roof(this);
                 }
 
+                
+                if (inst.is_packed_tile(fget(mget_tiledata(flr(cx/8), flr(cy/8))), packed_tile_types.spike))
+                {
+                    // placeholder to do massive damage.
+                    sprite temp = new sprite()
+                    {
+                        attack_power = float.MaxValue,
+                    };
+
+                    on_bounce(temp);
+                }
+
                 // ENEMY SPECIFIC:
                 // 
 
@@ -2273,10 +2285,13 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 for(int i = 0; i < inst.objs.Count; i++)
                 {
-                    platform o = inst.objs[i] as platform;
-                    if (o != null)
+                    sprite s = inst.objs[i] as sprite;
+                    platform o = s as platform;
+                    physical_object po = s as physical_object;
+
+                    if (s != null && o != null || po != null)
                     {
-                        if( inst.intersects_obj_obj(this, o))
+                        if( inst.intersects_obj_obj(this, s))
                         {
                             inst.objs_remove_queue.Add(this);
                             inst.objs_add_queue.Add(new simple_fx_projectile_death() { x = x, y = y });
@@ -2297,6 +2312,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 base._update60();
 
                 life_span--;
+            }
+
+            public override void on_bounce(sprite attacker, bool ignore_dead_time = false)
+            {
+                // do nothing.
             }
         }
 
@@ -3535,15 +3555,12 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             health_end = health_04, // UPDATE TECH BELOW WHEN ADDING HEALTH
 
             // Human tech
-            dash_pack = 1 << 5,
-            jump_boots = 1 << 6,
-            rock_smasher = 1 << 7,
-            ground_slam = 1 << 8,
-            light = 1 << 9,
-            air_tank = 1 << 10,
-
-            // TODO: Re-breather for underwater
-            // TODO: Light for caves
+            dash_pack = 1 << 5, // 1 - Beta
+            jump_boots = 1 << 6, // 6
+            rock_smasher = 1 << 7, // 2 - Delta
+            ground_slam = 1 << 8, // 4
+            light = 1 << 9, // (side) 3
+            air_tank = 1 << 10, // 5
 
             MAX = 1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
 
@@ -3620,7 +3637,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
             }
 
-            public virtual void on_take_hit(sprite attacker)
+            public virtual void on_take_hit(sprite attacker, bool respect_invul = true)
             {
 
             }
@@ -4405,7 +4422,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                             attack_power = float.MaxValue,
                         };
 
-                        on_take_hit(temp);
+                        // take damage and ignore invulnerability timer.
+                        on_take_hit(temp, false);
 
                         break;
                     }
@@ -4543,9 +4561,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 }
             }
 
-            public override void on_take_hit(sprite attacker)
+            public override void on_take_hit(sprite attacker, bool respect_invul = true)
             {
-                if (invul_time > 0)
+                if (invul_time > 0 && respect_invul)
                 {
                     return;
                 }
@@ -5016,7 +5034,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 {
                     self.dx = 0;
                     self.x = (flr(((self.cx + (offset_x)) / 8)) * 8) + correction_x - (offset_x) - (self.cx_offset);
-                    hit_point.X = self.cx + (offset_x);
+                    hit_point.X = self.cx + (offset_x) + 1; // +1 so that checks hit the tile next to us, rather than the edge of the new tile.
                     hit_point.Y = self.cy + i;
                     //return true;
                     hit = true;
