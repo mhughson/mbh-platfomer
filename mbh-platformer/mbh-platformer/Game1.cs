@@ -7863,7 +7863,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             }
 
             // HUD
-
+            // Test VS2019
             camera(0, 0);
 
             //if (night_vision_enabled || ir_vision_enabled)
