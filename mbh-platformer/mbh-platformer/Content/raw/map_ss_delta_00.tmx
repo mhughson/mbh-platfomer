@@ -1128,7 +1128,7 @@
     <property name="ID" type="int" value="43"/>
    </properties>
   </object>
-  <object id="107" name="camera" type="cam_area" x="1808" y="240" width="448" height="224">
+  <object id="107" name="camera" type="cam_area" x="1808" y="240" width="448" height="448">
    <properties>
     <property name="level_id" type="int" value="-1"/>
    </properties>
@@ -1239,11 +1239,6 @@
     <property name="firing_delay" type="int" value="30"/>
     <property name="start_delay" type="int" value="0"/>
     <property name="start_delay_index" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="121" name="camera" type="cam_area" x="1808" y="464" width="448" height="224">
-   <properties>
-    <property name="level_id" type="int" value="-1"/>
    </properties>
   </object>
   <object id="122" name="platform" type="spawn_platform" x="1904" y="512" width="64" height="16">

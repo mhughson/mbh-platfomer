@@ -389,6 +389,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public int bank = 0;
 
+            public bool update_offscreen = false;
+
             public class anim
             {
                 public int ticks;
@@ -657,6 +659,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 y = 64;
                 w = 32;
                 h = 24;
+
+                update_offscreen = true;
 
                 event_on_anim_done += delegate (string anim_name)
                 {
@@ -1359,6 +1363,9 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                     cleared_attacker = false;
 
+                    // Now that the bad guy is dead, we need to update offscreen
+                    // so that it can clean itself up.
+                    update_offscreen = true;
                 }
             }
 
@@ -1563,6 +1570,8 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 };
 
                 set_anim("default");
+
+                update_offscreen = true;
             }
 
             public override void _update60()
@@ -3414,6 +3423,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             public player_controller()
             {
+                update_offscreen = true;
                 reload();
             }
 
@@ -3555,12 +3565,14 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             health_end = health_04, // UPDATE TECH BELOW WHEN ADDING HEALTH
 
             // Human tech
-            dash_pack = 1 << 5, // 1 - Beta
-            jump_boots = 1 << 6, // 6
-            rock_smasher = 1 << 7, // 2 - Delta
-            ground_slam = 1 << 8, // 4
-            light = 1 << 9, // (side) 3
-            air_tank = 1 << 10, // 5
+            dash_pack = health_end << 1, // 1 - Beta
+            jump_boots = health_end << 2, // 6
+            rock_smasher = health_end << 3, // 2 - Delta
+            ground_slam = health_end << 4, // 4
+            light = health_end << 5, // (side) 3
+            air_tank = health_end << 6, // 5 - Echo
+
+            // todo: maps, compass?
 
             MAX = 1 << 31, // Just here as a reminder that this bitmask must remain 32 bit.
 
@@ -3613,6 +3625,11 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             //       for a short time after dash bouncing, or possibly even let them attack
             //       during that time.
             public bool dashing_last_frame { get; protected set; }
+
+            public player_pawn() : base()
+            {
+                update_offscreen = true;
+            }
 
             public override int get_hp_max()
             {
@@ -5495,6 +5512,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             public map_link()
             {
                 trans_dir = transition_dir.none;
+                update_offscreen = true;
             }
 
             public override void _update60()
@@ -6227,11 +6245,16 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
             if (string.Compare(o.Type, "spawn_chopper", true) == 0)
             {
-                b = new chopper(Int32.Parse(o.Properties["duration"]), Int32.Parse(o.Properties["dist"]))
+                System.Diagnostics.Debug.Assert(o.Properties.ContainsKey("duration"), "chopping missing 'duration' property");
+
+                if (o.Properties.ContainsKey("duration"))
                 {
-                    x = (float)o.X + ((float)o.Width * 0.5f),
-                    y = (float)o.Y + ((float)o.Height * 0.5f),
-                };
+                    b = new chopper(Int32.Parse(o.Properties["duration"]), Int32.Parse(o.Properties["dist"]))
+                    {
+                        x = (float)o.X + ((float)o.Width * 0.5f),
+                        y = (float)o.Y + ((float)o.Height * 0.5f),
+                    };
+                }
             }
             else if (string.Compare(o.Type, "spawn_lava_blaster", true) == 0)
             {
@@ -7475,6 +7498,31 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
                 message.open_this_frame = false;
             }
 
+            // Calculate where we think the camera is going to be drawning.
+            Vector2 offset = Vector2.Zero;
+            if (game_cam_man.queued_cam != null && game_cam != null)
+            {
+                float amount = (float)(game_cam_man.queued_ticks) / (float)(level_trans_time * 3);
+
+                Vector2 delta = game_cam_man.queued_cam.cam_pos() - game_cam.cam_pos();
+                offset = Vector2.SmoothStep(Vector2.Zero, delta, amount);
+            }
+
+            // Remove any objects that are no longer on screen.
+            for (int i = objs.Count - 1; i >= 0; i--)
+            {
+                sprite s = objs[i] as sprite;
+
+                if (s != null)
+                {
+                    if (!s.update_offscreen && game_cam != null && !game_cam.is_obj_in_play_area(s, offset))
+                    {
+                        objs.Remove(s);
+                        objs_add_queue.Add(s);
+                    }                      
+                }
+            }
+
             // flip before iterating backwards. This is slight wrong, since hidden items will get flipped
             // multiple times.
             // NOTE: This comes BEFORE objects get updated to avoid case where an object is
@@ -7487,12 +7535,29 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
 
                 if (s != null)
                 {
+                    // Skip any objects that are offscreen.
+                    if (!s.update_offscreen && game_cam != null && !game_cam.is_obj_in_play_area(s, offset))
+                    {
+                        continue;
+                    }
+                    // Skip any objects that are on rock smash tiles. They will pop out after we smash the rock.
                     if (inst.is_packed_tile(fget(mget_tiledata(flr(s.x / 8.0f), flr(s.y / 8.0f))), packed_tile_types.rock_smash))
                     {
                         continue;
                     }
                 }
-                objs.Add(objs_add_queue[i]);
+
+                // Activate the object, but ensure the player is always the last object
+                // so that it draws on top of everything else. That's how it used to behave
+                // prior to not updating offscreen objects.
+                if (objs_add_queue[i] is player_controller)
+                {
+                    objs.Add(objs_add_queue[i]);
+                }
+                else
+                {
+                    objs.Insert(0, objs_add_queue[i]);
+                }
                 objs_add_queue.RemoveAt(i);
                 if (s != null)
                 {
@@ -7781,7 +7846,7 @@ impossible. << Do this for phase 1. Phase 2 add multi-layer sweep (at least for 
             {
                 if (o is sprite)
                 {
-                    if (game_cam == null || game_cam.is_obj_in_play_area(o as sprite, offset))
+                    if ((o as sprite).update_offscreen || game_cam == null || game_cam.is_obj_in_play_area(o as sprite, offset))
                     {
                         (o as sprite).push_pal();
                         o._draw();

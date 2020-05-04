@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.3.1" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="480" height="256" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="278">
+<map version="1.2" tiledversion="1.3.1" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="480" height="256" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="279">
  <properties>
   <property name="level_id" type="int" value="11"/>
  </properties>
@@ -1354,7 +1354,7 @@
   </object>
   <object id="223" name="link" type="map_link" x="1296" y="864" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_in_a"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
@@ -1438,84 +1438,84 @@
   </object>
   <object id="246" name="link" type="map_link" x="1248" y="752" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_in_d"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="247" name="link" type="map_link" x="1104" y="816" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_in_c"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="248" name="link" type="map_link" x="1104" y="768" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_in_e"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="249" name="link" type="map_link" x="1056" y="752" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_in_f"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="250" name="link" type="map_link" x="1024" y="720" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_in_g"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="251" name="link" type="map_link" x="1168" y="640" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_b"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="252" name="link" type="map_link" x="1248" y="528" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_d"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="253" name="link" type="map_link" x="1104" y="592" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_c"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="254" name="link" type="map_link" x="1104" y="544" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_e"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="255" name="link" type="map_link" x="1056" y="528" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_f"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="256" name="link" type="map_link" x="1024" y="496" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_g"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
   <object id="257" name="link" type="map_link" x="1296" y="640" width="16" height="32">
    <properties>
-    <property name="dest_map_path" value="Content/raw/map_ss_mega_map_test.tmx"/>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
     <property name="dest_spawn_name" value="room_out_a"/>
     <property name="require_up_press" type="bool" value="true"/>
    </properties>
@@ -1563,6 +1563,13 @@
   <object id="277" name="gem" type="gem" x="544" y="80" width="16" height="16">
    <properties>
     <property name="ID" type="int" value="31"/>
+   </properties>
+  </object>
+  <object id="278" name="link" type="map_link" x="1168" y="864" width="16" height="32">
+   <properties>
+    <property name="dest_map_path" value="Content/raw/map_ss_echo_00.tmx"/>
+    <property name="dest_spawn_name" value="room_in_b"/>
+    <property name="require_up_press" type="bool" value="true"/>
    </properties>
   </object>
  </objectgroup>
