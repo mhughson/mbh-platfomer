@@ -16,6 +16,9 @@ jobs:
       - name: Install MonoGame 3.7.1
         run: choco install monogame --version=3.7.1 -y --no-progress
 
+      - name: Install .NET Framework 4.5.2 targeting pack
+        run: choco install netfx-4.5.2-devpack -y --no-progress
+
       - name: Restore NuGet packages
         run: nuget restore .\mbh-platformer\mbh-platformer.sln
 
