@@ -138,10 +138,6 @@
     <Content Include="libs\PicoX.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Mono8">
-      <HintPath>libs\Mono8.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Mono8GL">
       <HintPath>libs\Mono8GL.dll</HintPath>
       <Private>True</Private>
