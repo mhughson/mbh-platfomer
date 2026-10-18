@@ -1,0 +1,41 @@
+name: Package Windows game
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MonoGame 3.7.1
+        run: choco install monogame --version=3.7.1 -y --no-progress
+
+      - name: Restore NuGet packages
+        run: nuget restore .\mbh-platformer\mbh-platformer.sln
+
+      - name: Build game
+        run: msbuild .\mbh-platformer\mbh-platformer.sln /m /p:Configuration=Release "/p:Platform=Any CPU"
+
+      - name: Assemble Windows package
+        shell: pwsh
+        run: |
+          $output = ".\mbh-platformer\mbh-platformer\bin\DesktopGL\AnyCPU\Release"
+          $package = ".\windows-package"
+          if (-not (Test-Path "$output\mbh-platformer.exe")) {
+            throw "Build did not produce mbh-platformer.exe."
+          }
+          New-Item -ItemType Directory -Path "$package\Content" -Force | Out-Null
+          Copy-Item "$output\*" $package -Recurse -Force
+          Copy-Item ".\mbh-platformer\mbh-platformer\Content\raw" "$package\Content\raw" -Recurse -Force
+          Compress-Archive -Path "$package\*" -DestinationPath ".\mbh-platformer-windows.zip" -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mbh-platformer-windows
+          path: .\mbh-platformer-windows.zip

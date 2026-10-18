@@ -138,14 +138,18 @@
     <Content Include="libs\PicoX.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\mono8\Mono8GL\Mono8GL.csproj">
-      <Project>{7f50c385-c20f-4130-922c-45b8dfb7f870}</Project>
-      <Name>Mono8GL</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\mono8\PicoX\PicoX.csproj">
-      <Project>{c50cb44e-fb16-44d5-b09b-96b562f7d149}</Project>
-      <Name>PicoX</Name>
-    </ProjectReference>
+    <Reference Include="Mono8">
+      <HintPath>libs\Mono8.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono8GL">
+      <HintPath>libs\Mono8GL.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="PicoX">
+      <HintPath>libs\PicoX.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
