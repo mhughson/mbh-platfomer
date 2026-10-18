@@ -20,7 +20,23 @@ jobs:
         run: nuget restore .\mbh-platformer\mbh-platformer.sln
 
       - name: Build game
-        run: msbuild .\mbh-platformer\mbh-platformer.sln /m /p:Configuration=Release "/p:Platform=Any CPU"
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $installationPath) {
+            throw "Visual Studio MSBuild was not found."
+          }
+          $msbuild = Get-ChildItem -Path (Join-Path $installationPath "MSBuild") -Filter MSBuild.exe -Recurse |
+            Where-Object { $_.FullName -match "\\Bin\\MSBuild\.exe$" } |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $msbuild) {
+            throw "MSBuild.exe was not found in the Visual Studio installation."
+          }
+          & $msbuild .\mbh-platformer\mbh-platformer.sln /m /p:Configuration=Release "/p:Platform=Any CPU"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       - name: Assemble Windows package
         shell: pwsh
